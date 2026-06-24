@@ -9,7 +9,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary-dark to-primary opacity-90"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32 flex flex-col items-center text-center">
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 animate-fade-in-down">
-            Proyectá tu <span className="text-white underline decoration-white/50 underline-offset-8">futuro</span> con nosotros
+            Formá tu <span className="text-white underline decoration-white/50 underline-offset-8">futuro</span> con nosotros
           </h1>
           <p className="text-lg md:text-xl text-slate-200 max-w-2xl mb-10">
             En el IES La Cocha ofrecemos carreras terciarias de excelencia, con títulos oficiales y rápida salida laboral. Formación pública, gratuita y de calidad.
