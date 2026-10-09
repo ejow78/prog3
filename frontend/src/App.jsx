@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import TitleUpdater from './components/TitleUpdater';
 
 // Páginas publicas
 import Home from './pages/public/Home';
@@ -22,6 +23,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <TitleUpdater />
         <div className="flex flex-col min-h-screen">
           <Routes>
             {/* Rutas Admin sin Navbar/Footer */}
