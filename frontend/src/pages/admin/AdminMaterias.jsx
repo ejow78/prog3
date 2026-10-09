@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { Save, Plus, Trash2, Edit3, Check, X, BookOpen, AlertCircle, CheckCircle, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Save, Plus, Trash2, Edit3, Check, X, BookOpen, AlertCircle, CheckCircle, ArrowLeft, ChevronRight, GraduationCap, Users, UserCheck, UserX, Layers } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 
 // Helper to determine the exact academic years based on career duration string
@@ -290,6 +290,51 @@ export default function AdminMaterias() {
           </div>
         )}
 
+        {/* Metricas SaaS de la Carrera Seleccionada */}
+        {(() => {
+          const allMats = Object.values(materiasMap).flat();
+          const totalMats = allMats.length;
+          const conDocente = allMats.filter(m => (m.profesor || '').trim() !== '').length;
+          const sinDocente = totalMats - conDocente;
+
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Materias en Plan</p>
+                  <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{totalMats} Asignaturas</h3>
+                  <span className="text-[11px] text-slate-400 font-medium">Todos los años formativos</span>
+                </div>
+                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Con Docente Asignado</p>
+                  <h3 className="text-2xl font-bold text-emerald-600 mt-0.5">{conDocente}</h3>
+                  <span className="text-[11px] text-slate-400 font-medium">{totalMats > 0 ? Math.round((conDocente / totalMats) * 100) : 0}% de cobertura docente</span>
+                </div>
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <UserCheck className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vacantes / Sin Asignar</p>
+                  <h3 className={`text-2xl font-bold mt-0.5 ${sinDocente > 0 ? 'text-amber-600' : 'text-slate-800'}`}>{sinDocente}</h3>
+                  <span className="text-[11px] text-slate-400 font-medium">Asignaturas pendientes de titular</span>
+                </div>
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${sinDocente > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'}`}>
+                  <UserX className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Subjects Management Grid - Full Width */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
           <div>
@@ -489,6 +534,46 @@ export default function AdminMaterias() {
           <span className="font-semibold text-xs leading-relaxed">{mensaje.texto}</span>
         </div>
       )}
+
+      {/* Metricas Generales SaaS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Carreras con Plan</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{carreras.length} Carreras</h3>
+            <span className="text-[11px] text-slate-400 font-medium">Planes de estudio configurados</span>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <GraduationCap className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Asignaturas del IES</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
+              {carreras.reduce((sum, c) => sum + getMateriasCount(c), 0)} Materias
+            </h3>
+            <span className="text-[11px] text-slate-400 font-medium">Cátedras curriculares activas</span>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <BookOpen className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Promedio por Carrera</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
+              {carreras.length > 0 ? Math.round(carreras.reduce((sum, c) => sum + getMateriasCount(c), 0) / carreras.length) : 0} Materias
+            </h3>
+            <span className="text-[11px] text-slate-400 font-medium">Densidad curricular promedio</span>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+            <Layers className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
 
       {/* Grid of career cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

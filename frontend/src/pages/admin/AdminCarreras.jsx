@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Pencil, Plus, Trash2, Clock, BookOpen } from 'lucide-react';
+import { Pencil, Plus, Trash2, Clock, BookOpen, GraduationCap, Award, Layers } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
 import AdminDetallesCarrera from './AdminDetallesCarrera';
@@ -118,53 +118,95 @@ export default function AdminCarreras() {
           onSave={handleSaveDetalles}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-          {carreras.map((carrera) => (
-            <div
-              key={carrera.id}
-              className="group bg-white p-5 rounded-2xl border border-slate-200 hover:border-primary/45 shadow-3xs hover:shadow-sm transition-all duration-300 flex flex-col justify-between h-48 relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none transform translate-x-6 -translate-y-6 group-hover:scale-125 transition-transform"></div>
-              
-              <div className="space-y-3">
-                <div className="h-10 w-10 bg-primary/5 group-hover:bg-primary/10 text-primary rounded-xl flex items-center justify-center transition-all duration-300 shrink-0">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 line-clamp-2 uppercase tracking-wide">
-                    {carrera.nombre}
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-1">
-                    {carrera.tipo} · {carrera.duracion}
-                  </span>
-                </div>
+        <>
+          {/* Metricas SaaS de Carreras */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2 animate-fade-in">
+            <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Oferta Académica</p>
+                <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{carreras.length} Carreras</h3>
+                <span className="text-[11px] text-slate-400 font-medium">Planes formativos activos</span>
               </div>
-
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500 group-hover:text-primary transition-all duration-300 w-full font-sans">
-                <div className="flex items-center gap-1 text-[10px] text-slate-450 font-semibold max-w-[130px] truncate">
-                  <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="truncate">{carrera.horario}</span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={() => setEditingDetallesCarrera(carrera)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-655 hover:bg-slate-200 rounded-md transition-colors cursor-pointer border border-transparent font-bold text-[10px] uppercase tracking-wider active:scale-95"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Detalles
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCarrera(carrera.id, carrera.nombre)}
-                    className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors cursor-pointer"
-                    title="Eliminar Carrera"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+              <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <GraduationCap className="w-6 h-6" />
               </div>
             </div>
-          ))}
-        </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tecnicaturas Superiores</p>
+                <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
+                  {carreras.filter(c => (c.tipo || '').toLowerCase().includes('tecnicatura')).length}
+                </h3>
+                <span className="text-[11px] text-slate-400 font-medium">Formación técnica y profesional</span>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <Layers className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Profesorados Secundarios</p>
+                <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
+                  {carreras.filter(c => (c.tipo || '').toLowerCase().includes('profesorado')).length}
+                </h3>
+                <span className="text-[11px] text-slate-400 font-medium">Formación docente de grado</span>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Award className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+            {carreras.map((carrera) => (
+              <div
+                key={carrera.id}
+                className="group bg-white p-5 rounded-2xl border border-slate-200 hover:border-primary/45 shadow-3xs hover:shadow-sm transition-all duration-300 flex flex-col justify-between h-48 relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none transform translate-x-6 -translate-y-6 group-hover:scale-125 transition-transform"></div>
+                
+                <div className="space-y-3">
+                  <div className="h-10 w-10 bg-primary/5 group-hover:bg-primary/10 text-primary rounded-xl flex items-center justify-center transition-all duration-300 shrink-0">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 line-clamp-2 uppercase tracking-wide">
+                      {carrera.nombre}
+                    </h3>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-1">
+                      {carrera.tipo} · {carrera.duracion}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500 group-hover:text-primary transition-all duration-300 w-full font-sans">
+                  <div className="flex items-center gap-1 text-[10px] text-slate-450 font-semibold max-w-[130px] truncate">
+                    <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">{carrera.horario}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => setEditingDetallesCarrera(carrera)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-655 hover:bg-slate-200 rounded-md transition-colors cursor-pointer border border-transparent font-bold text-[10px] uppercase tracking-wider active:scale-95"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Detalles
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCarrera(carrera.id, carrera.nombre)}
+                      className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors cursor-pointer"
+                      title="Eliminar Carrera"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

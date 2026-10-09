@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Eye, Phone, Mail, FileText, Printer, MessageCircle, ExternalLink, Calendar, MapPin, User, GraduationCap } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
 import jsPDF from 'jspdf';
@@ -12,6 +12,7 @@ export default function AdminPreinscripciones() {
   const [filtroCarrera, setFiltroCarrera] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+  const [preinscripcionSeleccionada, setPreinscripcionSeleccionada] = useState(null);
   const { token, admin } = useContext(AuthContext);
 
   const fetchPreinscripciones = async () => {
@@ -129,6 +130,69 @@ export default function AdminPreinscripciones() {
 
     const fileName = `preinscripciones_${new Date().getTime()}.pdf`;
     doc.save(fileName);
+  };
+
+  const descargarFichaIndividual = (p) => {
+    const doc = new jsPDF('portrait');
+
+    // Encabezado decorativo
+    doc.setFillColor(30, 41, 59); // slate-800
+    doc.rect(0, 0, 210, 32, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INSTITUTO DE ENSEÑANZA SUPERIOR LA COCHA', 105, 13, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Ficha Oficial de Preinscripción de Aspirante', 105, 21, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text('Sistema de Gestión Académica', 105, 27, { align: 'center' });
+
+    doc.setTextColor(51, 65, 85);
+    doc.setFontSize(9);
+    const fechaHora = `${new Date(p.createdAt).toLocaleDateString('es-AR')} - ${new Date(p.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs`;
+    doc.text(`Fecha y Hora de Registro: ${fechaHora}`, 14, 42);
+    doc.text(`Identificador de Trámite: ${p._id}`, 14, 48);
+
+    const bodyData = [
+      ['Apellido y Nombre', `${p.apellido}, ${p.nombre}`],
+      ['Documento Nacional de Identidad (DNI)', p.dni],
+      ['Género', p.genero || 'No especificado'],
+      ['Carrera a la que aspira', p.carrera],
+      ['Localidad / Domicilio', p.localidad],
+      ['Teléfono de Contacto', p.telefono],
+      ['Correo Electrónico', p.email],
+      ['Estado Actual de la Solicitud', p.estado]
+    ];
+
+    autoTable(doc, {
+      startY: 54,
+      head: [['Campo', 'Información Declarada por el Aspirante']],
+      body: bodyData,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 4 },
+      columnStyles: {
+        0: { fontStyle: 'bold', width: 65, fillColor: [248, 250, 252] },
+        1: { width: 115 }
+      }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 20;
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('• Este comprobante certifica que la solicitud fue registrada en la plataforma oficial del IES La Cocha.', 14, finalY);
+    doc.text('• La inscripción definitiva queda sujeta a la presentación de la documentación física requerida en Secretaría.', 14, finalY + 5);
+
+    doc.setDrawColor(203, 213, 225);
+    doc.line(120, finalY + 30, 185, finalY + 30);
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Firma y Sello de Secretaría', 152, finalY + 36, { align: 'center' });
+
+    doc.save(`Ficha_Preinscripcion_${p.dni}_${p.apellido}.pdf`);
   };
 
   const exportarCSV = () => {
@@ -310,18 +374,25 @@ export default function AdminPreinscripciones() {
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap text-sm font-medium">
                       <div className="flex gap-2 justify-end items-center">
+                        <button
+                          onClick={() => setPreinscripcionSeleccionada(p)}
+                          className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-md transition-colors cursor-pointer"
+                          title="Ver Ficha Detallada"
+                        >
+                          <Eye className="h-5 w-5" />
+                        </button>
                         {p.estado === 'Pendiente' ? (
                           <>
                             <button
                               onClick={() => cambiarEstado(p._id, 'Aprobada')}
-                              className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors"
+                              className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors cursor-pointer"
                               title="Aprobar"
                             >
                               <Check className="h-5 w-5" />
                             </button>
                             <button
                               onClick={() => cambiarEstado(p._id, 'Rechazada')}
-                              className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors"
+                              className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors cursor-pointer"
                               title="Rechazar"
                             >
                               <X className="h-5 w-5" />
@@ -330,14 +401,14 @@ export default function AdminPreinscripciones() {
                         ) : (
                           <button
                             onClick={() => cambiarEstado(p._id, 'Pendiente')}
-                            className="text-xs text-slate-400 hover:text-slate-600 underline mr-2"
+                            className="text-xs text-slate-400 hover:text-slate-600 underline mr-2 cursor-pointer"
                           >
                             Hacer Pendiente
                           </button>
                         )}
                         <button
                           onClick={() => eliminarPreinscripcion(p._id)}
-                          className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors"
+                          className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors cursor-pointer"
                           title="Eliminar registro"
                         >
                           <Trash2 className="h-5 w-5" />
@@ -351,6 +422,223 @@ export default function AdminPreinscripciones() {
           </table>
         </div>
       </div>
+
+      {/* Modal Ficha Individual del Aspirante */}
+      {preinscripcionSeleccionada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-scale-up">
+            {/* Header del Modal */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-5 text-white flex justify-between items-start">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/10 text-slate-200">
+                    Ficha de Admisión
+                  </span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    preinscripcionSeleccionada.estado === 'Aprobada' ? 'bg-green-500/20 text-green-300 border border-green-400/30' :
+                    preinscripcionSeleccionada.estado === 'Rechazada' ? 'bg-red-500/20 text-red-300 border border-red-400/30' :
+                    'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
+                  }`}>
+                    {preinscripcionSeleccionada.estado === 'Aprobada' && <Check className="w-3 h-3" />}
+                    {preinscripcionSeleccionada.estado === 'Rechazada' && <X className="w-3 h-3" />}
+                    {preinscripcionSeleccionada.estado === 'Pendiente' && <Clock className="w-3 h-3" />}
+                    {preinscripcionSeleccionada.estado}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold tracking-tight">
+                  {preinscripcionSeleccionada.apellido}, {preinscripcionSeleccionada.nombre}
+                </h3>
+                <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Registrado el {new Date(preinscripcionSeleccionada.createdAt).toLocaleDateString('es-AR')} a las {new Date(preinscripcionSeleccionada.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
+                </p>
+              </div>
+              <button
+                onClick={() => setPreinscripcionSeleccionada(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                title="Cerrar Ficha"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div className="p-6 space-y-5 max-h-[72vh] overflow-y-auto">
+              {/* Carrera Solicitada */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Carrera Solicitada</span>
+                  <p className="text-sm font-bold text-slate-800 leading-snug">{preinscripcionSeleccionada.carrera}</p>
+                </div>
+              </div>
+
+              {/* Grilla de Datos Personales */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="border border-slate-100 rounded-xl p-3.5 bg-white shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    Documento Nacional (DNI)
+                  </span>
+                  <p className="text-sm font-bold text-slate-800 font-mono">{preinscripcionSeleccionada.dni}</p>
+                </div>
+
+                <div className="border border-slate-100 rounded-xl p-3.5 bg-white shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    Género Declarado
+                  </span>
+                  <p className="text-sm font-bold text-slate-800">{preinscripcionSeleccionada.genero || 'No especificado'}</p>
+                </div>
+
+                <div className="border border-slate-100 rounded-xl p-3.5 bg-white shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    Localidad / Residencia
+                  </span>
+                  <p className="text-sm font-bold text-slate-800">{preinscripcionSeleccionada.localidad || 'No especificada'}</p>
+                </div>
+
+                <div className="border border-slate-100 rounded-xl p-3.5 bg-white shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    ID de Registro
+                  </span>
+                  <p className="text-xs font-mono text-slate-600 truncate" title={preinscripcionSeleccionada._id}>
+                    {preinscripcionSeleccionada._id}
+                  </p>
+                </div>
+              </div>
+
+              {/* Canales de Contacto Directo */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">Contacto con el Aspirante</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* WhatsApp / Teléfono */}
+                  <div className="bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-between">
+                    <div className="truncate mr-2">
+                      <span className="text-[10px] text-slate-400 uppercase block font-semibold">Teléfono</span>
+                      <p className="text-xs font-bold text-slate-800 font-mono truncate">{preinscripcionSeleccionada.telefono}</p>
+                    </div>
+                    {preinscripcionSeleccionada.telefono && (
+                      <a
+                        href={`https://wa.me/${preinscripcionSeleccionada.telefono.replace(/\D/g, '').startsWith('54') ? preinscripcionSeleccionada.telefono.replace(/\D/g, '') : '549' + preinscripcionSeleccionada.telefono.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-xs font-bold transition-colors shrink-0"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        WhatsApp
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Email */}
+                  <div className="bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-between">
+                    <div className="truncate mr-2">
+                      <span className="text-[10px] text-slate-400 uppercase block font-semibold">Email</span>
+                      <p className="text-xs font-bold text-slate-800 truncate" title={preinscripcionSeleccionada.email}>{preinscripcionSeleccionada.email}</p>
+                    </div>
+                    {preinscripcionSeleccionada.email && (
+                      <a
+                        href={`mailto:${preinscripcionSeleccionada.email}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold transition-colors shrink-0"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        Email
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cambiar Estado Directo */}
+              <div className="border-t border-slate-200 pt-4 flex flex-wrap items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Modificar Estado:</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      cambiarEstado(preinscripcionSeleccionada._id, 'Aprobada');
+                      setPreinscripcionSeleccionada({ ...preinscripcionSeleccionada, estado: 'Aprobada' });
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      preinscripcionSeleccionada.estado === 'Aprobada'
+                        ? 'bg-green-600 text-white shadow-xs'
+                        : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Aprobada
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      cambiarEstado(preinscripcionSeleccionada._id, 'Pendiente');
+                      setPreinscripcionSeleccionada({ ...preinscripcionSeleccionada, estado: 'Pendiente' });
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      preinscripcionSeleccionada.estado === 'Pendiente'
+                        ? 'bg-yellow-600 text-white shadow-xs'
+                        : 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100 border border-yellow-200'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    Pendiente
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      cambiarEstado(preinscripcionSeleccionada._id, 'Rechazada');
+                      setPreinscripcionSeleccionada({ ...preinscripcionSeleccionada, estado: 'Rechazada' });
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      preinscripcionSeleccionada.estado === 'Rechazada'
+                        ? 'bg-red-600 text-white shadow-xs'
+                        : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+                    }`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Rechazada
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer con Acciones */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3">
+              <button
+                onClick={() => {
+                  const idToDelete = preinscripcionSeleccionada._id;
+                  setPreinscripcionSeleccionada(null);
+                  eliminarPreinscripcion(idToDelete);
+                }}
+                className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Eliminar Registro
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => descargarFichaIndividual(preinscripcionSeleccionada)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  Descargar Ficha en PDF
+                </button>
+                <button
+                  onClick={() => setPreinscripcionSeleccionada(null)}
+                  className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

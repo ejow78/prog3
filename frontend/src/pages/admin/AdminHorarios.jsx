@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { BookOpen, Clock, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
+import { BookOpen, Clock, AlertCircle, CheckCircle, ChevronRight, GraduationCap, Layers, Calendar } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 import AdminHorariosGrid from './AdminHorariosGrid';
 
@@ -120,6 +120,44 @@ export default function AdminHorarios() {
           <span className="font-semibold text-xs leading-relaxed">{mensaje.texto}</span>
         </div>
       )}
+
+      {/* Metricas SaaS de Planificacion de Horarios */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Carreras Planificadas</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{carreras.length} Carreras</h3>
+            <span className="text-[11px] text-slate-400 font-medium">Cronogramas de cursada</span>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <GraduationCap className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Años con Horario</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
+              {carreras.reduce((sum, c) => sum + (c.horariosSemanales ? c.horariosSemanales.filter(h => h.franjas && h.franjas.length > 0).length : 0), 0)} Años
+            </h3>
+            <span className="text-[11px] text-slate-400 font-medium">Grillas semanales activas</span>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <Calendar className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Franjas y Turnos</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{carreras.filter(c => c.horario).length} Turnos</h3>
+            <span className="text-[11px] text-slate-400 font-medium">Mañana, Tarde y Noche</span>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Clock className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
 
       {/* Grid selector of careers */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
