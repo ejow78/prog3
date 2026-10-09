@@ -43,7 +43,7 @@ const Resumen = () => {
 
   const fetchStatsAndData = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/stats', {
+      const response = await fetch('/api/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -441,7 +441,7 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:5000/api/auth/logout', {
+      await fetch('/api/auth/logout', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

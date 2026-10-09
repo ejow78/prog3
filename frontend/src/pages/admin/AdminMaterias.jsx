@@ -40,7 +40,7 @@ export default function AdminMaterias() {
 
   const fetchCarreras = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/carreras');
+      const response = await fetch('/api/carreras');
       if (!response.ok) throw new Error('Error al obtener carreras');
       const data = await response.json();
       data.sort((a, b) => a.id - b.id);
@@ -197,7 +197,7 @@ export default function AdminMaterias() {
         };
       });
 
-      const response = await fetch(`http://localhost:5000/api/carreras/${carreraSeleccionada.id}`, {
+      const response = await fetch(`/api/carreras/${carreraSeleccionada.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

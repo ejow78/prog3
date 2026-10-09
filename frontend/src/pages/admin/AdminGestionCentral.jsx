@@ -36,7 +36,7 @@ export default function AdminGestionCentral() {
   const fetchSettings = async () => {
     try {
       setSettingsLoading(true);
-      const response = await fetch('http://localhost:5000/api/settings');
+      const response = await fetch('/api/settings');
       if (response.ok) {
         const data = await response.json();
         setSettings(data);
@@ -52,7 +52,7 @@ export default function AdminGestionCentral() {
     e.preventDefault();
     try {
       setSettingsLoading(true);
-      const response = await fetch('http://localhost:5000/api/settings', {
+      const response = await fetch('/api/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ export default function AdminGestionCentral() {
   const fetchUsers = async () => {
     try {
       setUsersLoading(true);
-      const response = await fetch('http://localhost:5000/api/auth/users', {
+      const response = await fetch('/api/auth/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -127,8 +127,8 @@ export default function AdminGestionCentral() {
     try {
       setUsersLoading(true);
       const url = editingUser
-        ? `http://localhost:5000/api/auth/users/${editingUser._id}`
-        : 'http://localhost:5000/api/auth/users';
+        ? `/api/auth/users/${editingUser._id}`
+        : '/api/auth/users';
 
       const method = editingUser ? 'PUT' : 'POST';
       const body = { ...formData };
@@ -172,7 +172,7 @@ export default function AdminGestionCentral() {
 
     try {
       setUsersLoading(true);
-      const response = await fetch(`http://localhost:5000/api/auth/users/${user._id}`, {
+      const response = await fetch(`/api/auth/users/${user._id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

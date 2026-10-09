@@ -11,7 +11,7 @@ export default function AdminFechasExamenes() {
   const fetchCarreras = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/carreras');
+      const response = await fetch('/api/carreras');
       if (!response.ok) throw new Error('Error al obtener las carreras');
       const data = await response.json();
       data.sort((a, b) => a.id - b.id);

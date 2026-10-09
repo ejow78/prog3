@@ -27,7 +27,7 @@ export default function InscripcionExamenes() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/settings');
+        const response = await fetch('/api/settings');
         if (response.ok) {
           const data = await response.json();
           setSettings(data);
@@ -52,13 +52,13 @@ export default function InscripcionExamenes() {
   useEffect(() => {
     const fetchCarrerasYFechas = async () => {
       try {
-        const resCarreras = await fetch('http://localhost:5000/api/carreras');
+        const resCarreras = await fetch('/api/carreras');
         if (!resCarreras.ok) throw new Error('Error al cargar carreras');
         const dataCarreras = await resCarreras.json();
         dataCarreras.sort((a, b) => a.id - b.id);
         setCarreras(dataCarreras);
 
-        const resFechas = await fetch('http://localhost:5000/api/fechas-examenes');
+        const resFechas = await fetch('/api/fechas-examenes');
         if (resFechas.ok) {
           const dataFechas = await resFechas.json();
           setFechasExamenes(dataFechas);
@@ -333,7 +333,7 @@ export default function InscripcionExamenes() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/inscripciones-examenes', {
+      const response = await fetch('/api/inscripciones-examenes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

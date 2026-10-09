@@ -90,7 +90,7 @@ export default function AdminFechasExamenesGrid({ carrera, onBack }) {
         const initialGrid = buildInitialGrid(years);
 
         // 3. Fetch existing exam dates from backend
-        const response = await fetch('http://localhost:5000/api/fechas-examenes');
+        const response = await fetch('/api/fechas-examenes');
         if (!response.ok) throw new Error('Error al cargar mesas de exámenes');
         const allFechas = await response.json();
 
@@ -224,7 +224,7 @@ export default function AdminFechasExamenesGrid({ carrera, onBack }) {
     setTurnoActivo(newTurno);
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/fechas-examenes');
+      const response = await fetch('/api/fechas-examenes');
       if (!response.ok) throw new Error('Error al cargar mesas');
       const allFechas = await response.json();
       const matchingFechas = allFechas.filter(f => f.carrera === carrera.nombre);
@@ -387,7 +387,7 @@ export default function AdminFechasExamenesGrid({ carrera, onBack }) {
 
       // Execute DELETEs
       for (const id of deletes) {
-        const response = await fetch(`http://localhost:5000/api/fechas-examenes/${id}`, {
+        const response = await fetch(`/api/fechas-examenes/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -396,7 +396,7 @@ export default function AdminFechasExamenesGrid({ carrera, onBack }) {
 
       // Execute POSTs
       for (const body of posts) {
-        const response = await fetch('http://localhost:5000/api/fechas-examenes', {
+        const response = await fetch('/api/fechas-examenes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -409,7 +409,7 @@ export default function AdminFechasExamenesGrid({ carrera, onBack }) {
 
       // Execute PUTs
       for (const item of puts) {
-        const response = await fetch(`http://localhost:5000/api/fechas-examenes/${item.id}`, {
+        const response = await fetch(`/api/fechas-examenes/${item.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

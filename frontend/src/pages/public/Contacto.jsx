@@ -28,7 +28,7 @@ export default function Contacto() {
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:5000/api/mensajes', {
+      const response = await fetch('/api/mensajes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

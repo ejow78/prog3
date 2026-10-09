@@ -20,7 +20,7 @@ export default function Carreras() {
   useEffect(() => {
     const fetchCarreras = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/carreras');
+        const response = await fetch('/api/carreras');
         if (!response.ok) throw new Error('Error fetching carreras');
         const data = await response.json();
 

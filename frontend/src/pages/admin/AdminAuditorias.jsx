@@ -28,7 +28,7 @@ export default function AdminAuditorias() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/auditorias', {
+      const response = await fetch('/api/auditorias', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {

@@ -13,7 +13,7 @@ export default function AdminCarreras() {
 
   const fetchCarreras = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/carreras');
+      const response = await fetch('/api/carreras');
       if (!response.ok) throw new Error('Error al cargar carreras');
       const data = await response.json();
       data.sort((a, b) => a.id - b.id);
@@ -36,8 +36,8 @@ export default function AdminCarreras() {
       
       const isNew = !dataToSave.id;
       const url = isNew 
-        ? 'http://localhost:5000/api/carreras' 
-        : `http://localhost:5000/api/carreras/${dataToSave.id}`;
+        ? '/api/carreras' 
+        : `/api/carreras/${dataToSave.id}`;
       
       const method = isNew ? 'POST' : 'PUT';
 
@@ -64,7 +64,7 @@ export default function AdminCarreras() {
     if (!window.confirm(`¿Estás seguro de que quieres eliminar la carrera "${nombre}"? Esta acción es irreversible.`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/carreras/${id}`, { 
+      const response = await fetch(`/api/carreras/${id}`, { 
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

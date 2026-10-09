@@ -26,7 +26,7 @@ export default function Preinscripcion() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/settings');
+        const response = await fetch('/api/settings');
         if (response.ok) {
           const data = await response.json();
           setSettings(data);
@@ -60,7 +60,7 @@ export default function Preinscripcion() {
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:5000/api/preinscripciones', {
+      const response = await fetch('/api/preinscripciones', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -68,7 +68,7 @@ export default function FechasExamenes() {
   useEffect(() => {
     const fetchFechas = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/fechas-examenes');
+        const response = await fetch('/api/fechas-examenes');
         if (!response.ok) throw new Error('Error al obtener el cronograma de exámenes');
         const data = await response.json();
         

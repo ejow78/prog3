@@ -16,7 +16,7 @@ export default function AdminPreinscripciones() {
 
   const fetchPreinscripciones = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/preinscripciones', {
+      const response = await fetch('/api/preinscripciones', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al obtener preinscripciones');
@@ -36,7 +36,7 @@ export default function AdminPreinscripciones() {
 
   const cambiarEstado = async (id, nuevoEstado) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/preinscripciones/${id}/estado`, {
+      const response = await fetch(`/api/preinscripciones/${id}/estado`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -60,7 +60,7 @@ export default function AdminPreinscripciones() {
     if (!window.confirm('¿Estás seguro de eliminar esta preinscripción? Esta acción no se puede deshacer.')) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/api/preinscripciones/${id}`, {
+      const response = await fetch(`/api/preinscripciones/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

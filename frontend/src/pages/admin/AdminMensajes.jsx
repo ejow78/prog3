@@ -11,7 +11,7 @@ export default function AdminMensajes() {
 
   const fetchMensajes = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/mensajes', {
+      const response = await fetch('/api/mensajes', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al obtener mensajes');
@@ -31,7 +31,7 @@ export default function AdminMensajes() {
 
   const toggleLeido = async (id, estadoActual) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/mensajes/${id}/leido`, {
+      const response = await fetch(`/api/mensajes/${id}/leido`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export default function AdminMensajes() {
     if (!window.confirm('¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/api/mensajes/${id}`, {
+      const response = await fetch(`/api/mensajes/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

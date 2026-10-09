@@ -13,7 +13,7 @@ export default function AdminHorarios() {
   const fetchCarreras = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/carreras');
+      const response = await fetch('/api/carreras');
       if (!response.ok) throw new Error('Error al obtener las carreras');
       const data = await response.json();
       data.sort((a, b) => a.id - b.id);
@@ -38,7 +38,7 @@ export default function AdminHorarios() {
   const handleSaveHorarios = async (carreraId, payload) => {
     try {
       setMensaje({ texto: '', tipo: '' });
-      const response = await fetch(`http://localhost:5000/api/carreras/${carreraId}`, {
+      const response = await fetch(`/api/carreras/${carreraId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

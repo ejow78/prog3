@@ -26,7 +26,7 @@ export default function AdminExamenes() {
 
   const fetchInscripciones = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/inscripciones-examenes', {
+      const response = await fetch('/api/inscripciones-examenes', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al obtener inscripciones');
@@ -46,7 +46,7 @@ export default function AdminExamenes() {
 
   const cambiarEstado = async (id, nuevoEstado) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/inscripciones-examenes/${id}/estado`, {
+      const response = await fetch(`/api/inscripciones-examenes/${id}/estado`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export default function AdminExamenes() {
     if (!window.confirm('¿Estás seguro de eliminar esta inscripción a exámenes? Esta acción no se puede deshacer.')) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/api/inscripciones-examenes/${id}`, {
+      const response = await fetch(`/api/inscripciones-examenes/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

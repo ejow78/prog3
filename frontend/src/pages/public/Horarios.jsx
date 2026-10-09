@@ -12,7 +12,7 @@ export default function Horarios() {
   useEffect(() => {
     const fetchCarreras = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/carreras');
+        const response = await fetch('/api/carreras');
         if (!response.ok) throw new Error('Error fetching carreras');
         const data = await response.json();
         data.sort((a, b) => a.id - b.id);
