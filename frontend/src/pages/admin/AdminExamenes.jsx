@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Calendar, Eye, BookOpen, GraduationCap, User, FileText, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Calendar, Eye, BookOpen, GraduationCap, User, FileText, CheckCircle2, ChevronRight, RotateCcw } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import SoftDeleteFilter from '../../components/admin/SoftDeleteFilter';
 
 export default function AdminExamenes() {
   const [inscripciones, setInscripciones] = useState([]);
@@ -17,17 +18,18 @@ export default function AdminExamenes() {
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [inscripcionSeleccionada, setInscripcionSeleccionada] = useState(null);
+  const [activeTab, setActiveTab] = useState('activos'); // 'activos' | 'papelera'
   const { token, admin } = useContext(AuthContext);
 
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filtroCarrera, filtroAño, filtroTurno, filtroLlamado, filtroEstado, searchQuery]);
+  }, [filtroCarrera, filtroAño, filtroTurno, filtroLlamado, filtroEstado, searchQuery, activeTab]);
 
   const fetchInscripciones = async () => {
     try {
-      const response = await fetch('/api/inscripciones-examenes', {
+      const response = await fetch('/api/inscripciones-examenes?includeDeleted=true', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al obtener inscripciones');
@@ -67,17 +69,17 @@ export default function AdminExamenes() {
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
-  const eliminarInscripcion = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta inscripción a exámenes? Esta acción no se puede deshacer.')) return;
+  const eliminarInscripcion = async (id, nombreAlumno) => {
+    if (!window.confirm(`¿Enviar a la papelera la inscripción de ${nombreAlumno || 'este alumno'}? Podrás restaurarla en cualquier momento.`)) return;
     
     try {
       const response = await fetch(`/api/inscripciones-examenes/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error('Error al eliminar');
+      if (!response.ok) throw new Error('Error al enviar a papelera');
       
-      setMensaje({ texto: 'Inscripción eliminada correctamente', tipo: 'exito' });
+      setMensaje({ texto: 'Inscripción enviada a papelera de reciclaje', tipo: 'exito' });
       fetchInscripciones();
     } catch (error) {
       console.error(error);
@@ -86,6 +88,28 @@ export default function AdminExamenes() {
     
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
+
+  const restaurarInscripcion = async (id, nombreAlumno) => {
+    try {
+      const response = await fetch(`/api/inscripciones-examenes/${id}/restore`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al restaurar');
+
+      setMensaje({ texto: `Inscripción de ${nombreAlumno || 'alumno'} restaurada con éxito`, tipo: 'exito' });
+      fetchInscripciones();
+    } catch (error) {
+      console.error(error);
+      setMensaje({ texto: 'Error al restaurar inscripción', tipo: 'error' });
+    }
+
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+  };
+
+  const activas = inscripciones.filter(i => !i.isDeleted);
+  const papelera = inscripciones.filter(i => i.isDeleted);
+  const listaBase = activeTab === 'activos' ? activas : papelera;
 
   const carrerasUnicas = ['Todas', ...new Set(inscripciones.map(i => i.carrera))];
 
@@ -118,7 +142,7 @@ export default function AdminExamenes() {
     )
   ].sort();
 
-  const filtradas = inscripciones.filter(i => {
+  const filtradas = listaBase.filter(i => {
     const matchEstado = filtroEstado === 'Todas' || i.estado === filtroEstado;
     const matchCarrera = filtroCarrera === 'Todas' || i.carrera === filtroCarrera;
     const matchAño = filtroAño === 'Todos' || i.añoCursando === filtroAño;
@@ -346,6 +370,15 @@ export default function AdminExamenes() {
 
       {/* Search & Filters Card */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <SoftDeleteFilter
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            totalActivos={activas.length}
+            totalPapelera={papelera.length}
+          />
+        </div>
+
         <div className="relative w-full">
           <Search className="absolute left-3.5 top-2.5 h-5 w-5 text-slate-400" />
           <input
@@ -504,31 +537,44 @@ export default function AdminExamenes() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        {i.estado === 'Pendiente' && (
+                        {i.isDeleted ? (
+                          <button
+                            onClick={() => restaurarInscripcion(i._id, `${i.apellido}, ${i.nombre}`)}
+                            className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                            title="Restaurar inscripción"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Restaurar
+                          </button>
+                        ) : (
                           <>
+                            {i.estado === 'Pendiente' && (
+                              <>
+                                <button
+                                  onClick={() => cambiarEstado(i._id, 'Aprobada')}
+                                  className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors cursor-pointer border border-green-200"
+                                  title="Aprobar Inscripción"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => cambiarEstado(i._id, 'Rechazada')}
+                                  className="p-1.5 bg-red-50 text-red-650 hover:bg-red-100 rounded-lg transition-colors cursor-pointer border border-red-200"
+                                  title="Rechazar Inscripción"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
                             <button
-                              onClick={() => cambiarEstado(i._id, 'Aprobada')}
-                              className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors cursor-pointer border border-green-200"
-                              title="Aprobar Inscripción"
+                              onClick={() => eliminarInscripcion(i._id, `${i.apellido}, ${i.nombre}`)}
+                              className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors ml-1 cursor-pointer border border-transparent"
+                              title="Enviar a papelera"
                             >
-                              <Check className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => cambiarEstado(i._id, 'Rechazada')}
-                              className="p-1.5 bg-red-50 text-red-650 hover:bg-red-100 rounded-lg transition-colors cursor-pointer border border-red-200"
-                              title="Rechazar Inscripción"
-                            >
-                              <X className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </>
                         )}
-                        <button
-                          onClick={() => eliminarInscripcion(i._id)}
-                          className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors ml-1 cursor-pointer border border-transparent"
-                          title="Eliminar Inscripción"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>

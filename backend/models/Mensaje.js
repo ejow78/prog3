@@ -33,6 +33,18 @@ const mensajeSchema = new mongoose.Schema({
   leido: {
     type: Boolean,
     default: false
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true // Esto crea automáticamente createdAt y updatedAt con la fecha y hora

@@ -1,8 +1,11 @@
 import { useState, useEffect, useContext } from 'react';
-import { Save, Plus, Trash2, Edit3, Check, X, BookOpen, AlertCircle, CheckCircle, ArrowLeft, ChevronRight, GraduationCap, Users, UserCheck, UserX, Layers } from 'lucide-react';
+import { 
+  Save, Plus, Trash2, Edit3, Check, X, BookOpen, AlertCircle, 
+  CheckCircle2, ArrowLeft, GraduationCap, Users, UserCheck, 
+  UserX, Search, Sparkles 
+} from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 
-// Helper to determine the exact academic years based on career duration string
 const getYearsList = (duracion) => {
   if (!duracion) return ['1° Año', '2° Año', '3° Año'];
   const match = duracion.match(/(\d+)/);
@@ -16,7 +19,7 @@ const getYearsList = (duracion) => {
       return list;
     }
   }
-  return ['1° Año', '2° Año', '3° Año']; // fallback
+  return ['1° Año', '2° Año', '3° Año'];
 };
 
 export default function AdminMaterias() {
@@ -26,20 +29,22 @@ export default function AdminMaterias() {
   const [saving, setSaving] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
-  // Materias state for editing
-  // Format: { [año]: [ { nombre: 'MATERIA 1', profesor: 'JUAN PÉREZ' } ] }
+  // Materias organizadas por año: { [año]: [ { nombre: '', profesor: '' } ] }
   const [materiasMap, setMateriasMap] = useState({});
   const [añoActivo, setAñoActivo] = useState(null);
-  const [nuevaMateriaInput, setNuevaMateriaInput] = useState('');
-  const [nuevoProfesorInput, setNuevoProfesorInput] = useState('');
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editingNombre, setEditingNombre] = useState('');
-  const [editingProfesor, setEditingProfesor] = useState('');
+
+  // Formulario rápido para nueva materia
+  const [nuevaMateriaNombre, setNuevaMateriaNombre] = useState('');
+  const [nuevoProfesorNombre, setNuevoProfesorNombre] = useState('');
+
+  // Buscador de materias
+  const [busqueda, setBusqueda] = useState('');
 
   const { token } = useContext(AuthContext);
 
   const fetchCarreras = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/carreras');
       if (!response.ok) throw new Error('Error al obtener carreras');
       const data = await response.json();
@@ -64,138 +69,88 @@ export default function AdminMaterias() {
 
   const handleSelectCarrera = (carrera) => {
     setCarreraSeleccionada(carrera);
-    setEditingIndex(null);
-    setNuevaMateriaInput('');
-    setNuevoProfesorInput('');
-
-    // Determine available academic years based on career duration
     const years = getYearsList(carrera.duracion);
     setAñoActivo(years[0]);
 
-    // Build initial materias map
     const initialMap = {};
     years.forEach(y => {
-      // 1. Check if Carrera already has structured materias saved in the database
       const savedObj = carrera.materias?.find(m => m.año === y);
-      if (savedObj !== undefined) {
-        initialMap[y] = (savedObj.materiasDetalle || []).map(item => ({
-          nombre: item.nombre.trim().toUpperCase(),
-          profesor: (item.profesor || '').trim()
+      if (savedObj && savedObj.materiasDetalle && savedObj.materiasDetalle.length > 0) {
+        initialMap[y] = savedObj.materiasDetalle.map(m => ({
+          nombre: (m.nombre || '').trim().toUpperCase(),
+          profesor: (m.profesor || '').trim()
         }));
-        if (initialMap[y].length === 0 && savedObj.nombres && savedObj.nombres.length > 0) {
-          initialMap[y] = savedObj.nombres.map(name => ({
-            nombre: name.trim().toUpperCase(),
-            profesor: ''
-          }));
-        }
+      } else if (savedObj && savedObj.nombres && savedObj.nombres.length > 0) {
+        initialMap[y] = savedObj.nombres.map(name => ({
+          nombre: (name || '').trim().toUpperCase(),
+          profesor: ''
+        }));
       } else {
-        // 2. Fallback: extract unique subjects and professors from schedules (horariosSemanales)
-        const uniqueSubsMap = new Map();
-        const scheduleObj = carrera.horariosSemanales?.find(h => h.año === y);
-        if (scheduleObj && scheduleObj.franjas) {
-          scheduleObj.franjas.forEach(f => {
-            if (f.esRecreo) return;
-            ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].forEach(dia => {
-              const cell = f[dia];
-              const mName = cell?.materia;
-              const mProf = cell?.profesor;
-              if (mName && mName.trim() !== '' && !mName.toLowerCase().includes('recreo')) {
-                const upperName = mName.trim().toUpperCase();
-                const currentProf = uniqueSubsMap.get(upperName);
-                if (!currentProf && mProf && mProf.trim() !== '') {
-                  uniqueSubsMap.set(upperName, mProf.trim());
-                } else if (!uniqueSubsMap.has(upperName)) {
-                  uniqueSubsMap.set(upperName, '');
-                }
-              }
-            });
-          });
-        }
-        initialMap[y] = Array.from(uniqueSubsMap.entries()).map(([nombre, profesor]) => ({
-          nombre,
-          profesor
-        })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+        initialMap[y] = [];
       }
     });
 
     setMateriasMap(initialMap);
   };
 
-  const handleAddMateria = () => {
-    if (!nuevaMateriaInput.trim()) return;
-    const uppercaseSub = nuevaMateriaInput.trim().toUpperCase();
-    const profName = nuevoProfesorInput.trim();
+  const handleAddMateria = (e) => {
+    e.preventDefault();
+    if (!nuevaMateriaNombre.trim()) {
+      mostrarAlerta('El nombre de la materia es obligatorio.', 'error');
+      return;
+    }
 
+    const nombreUpper = nuevaMateriaNombre.trim().toUpperCase();
     const currentList = materiasMap[añoActivo] || [];
-    if (currentList.some(item => item.nombre === uppercaseSub)) {
-      mostrarAlerta('La asignatura ya existe en este año.', 'error');
+
+    if (currentList.some(m => m.nombre === nombreUpper)) {
+      mostrarAlerta('Esa materia ya existe en este año lectivo.', 'error');
       return;
     }
 
     setMateriasMap({
       ...materiasMap,
-      [añoActivo]: [...currentList, { nombre: uppercaseSub, profesor: profName }]
+      [añoActivo]: [
+        ...currentList,
+        { nombre: nombreUpper, profesor: nuevoProfesorNombre.trim() }
+      ]
     });
-    setNuevaMateriaInput('');
-    setNuevoProfesorInput('');
-    mostrarAlerta('Asignatura agregada a la lista.', 'exito');
+
+    setNuevaMateriaNombre('');
+    setNuevoProfesorNombre('');
+    mostrarAlerta('Materia agregada a la lista. Guarda los cambios para confirmar.', 'exito');
   };
 
-  const handleRemoveMateria = (idx) => {
-    const currentList = [...(materiasMap[añoActivo] || [])];
-    currentList.splice(idx, 1);
+  const handleUpdateProfesor = (index, nuevoProfesor) => {
+    const list = [...(materiasMap[añoActivo] || [])];
+    list[index].profesor = nuevoProfesor;
     setMateriasMap({
       ...materiasMap,
-      [añoActivo]: currentList
+      [añoActivo]: list
     });
-    setEditingIndex(null);
   };
 
-  const handleStartEdit = (idx, item) => {
-    setEditingIndex(idx);
-    setEditingNombre(item.nombre);
-    setEditingProfesor(item.profesor || '');
-  };
-
-  const handleSaveEdit = (idx) => {
-    if (!editingNombre.trim()) return;
-    const uppercaseVal = editingNombre.trim().toUpperCase();
-    const profVal = editingProfesor.trim();
-
-    const currentList = [...(materiasMap[añoActivo] || [])];
-    // Check duplication (excluding itself)
-    if (currentList.some((sub, i) => i !== idx && sub.nombre === uppercaseVal)) {
-      mostrarAlerta('Ya existe otra asignatura con ese nombre.', 'error');
-      return;
-    }
-
-    currentList[idx] = { nombre: uppercaseVal, profesor: profVal };
+  const handleDeleteMateria = (index, nombre) => {
+    if (!window.confirm(`¿Quitar la materia "${nombre}" del plan de estudio?`)) return;
+    const list = [...(materiasMap[añoActivo] || [])];
+    list.splice(index, 1);
     setMateriasMap({
       ...materiasMap,
-      [añoActivo]: currentList
+      [añoActivo]: list
     });
-    setEditingIndex(null);
   };
 
   const handleSaveAll = async () => {
-    if (!carreraSeleccionada) return;
-
-    setSaving(true);
-    setMensaje({ texto: '', tipo: '' });
-
     try {
-      // Reformat materias map back to database schema structure
-      const formattedMaterias = Object.entries(materiasMap).map(([año, items]) => {
-        const cleanItems = items.filter(item => item.nombre.trim() !== '');
-        return {
-          año,
-          nombres: cleanItems.map(item => item.nombre), // backward compatibility list of strings
-          materiasDetalle: cleanItems.map(item => ({
-            nombre: item.nombre,
-            profesor: item.profesor || ''
-          }))
-        };
-      });
+      setSaving(true);
+      const payloadMaterias = Object.entries(materiasMap).map(([año, items]) => ({
+        año,
+        nombres: items.map(i => i.nombre),
+        materiasDetalle: items.map(i => ({
+          nombre: i.nombre,
+          profesor: i.profesor
+        }))
+      }));
 
       const response = await fetch(`/api/carreras/${carreraSeleccionada.id}`, {
         method: 'PUT',
@@ -203,414 +158,280 @@ export default function AdminMaterias() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ materias: formattedMaterias })
+        body: JSON.stringify({ materias: payloadMaterias })
       });
 
-      if (!response.ok) throw new Error('Error al actualizar las materias');
+      if (!response.ok) throw new Error('Error al guardar las materias.');
 
       const updatedCarrera = await response.json();
-      
-      // Update our local carreras state to reflect changes
       setCarreras(carreras.map(c => c.id === updatedCarrera.id ? updatedCarrera : c));
       setCarreraSeleccionada(updatedCarrera);
-
-      mostrarAlerta('Asignaturas y docentes guardados correctamente.', 'exito');
+      mostrarAlerta('Plan de materias y docentes guardado con éxito.', 'exito');
     } catch (err) {
       console.error(err);
-      mostrarAlerta(err.message || 'Error al guardar los cambios.', 'error');
+      mostrarAlerta(err.message || 'Error al guardar.', 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const getMateriasCount = (carrera) => {
-    if (!carrera.materias || carrera.materias.length === 0) return 0;
-    return carrera.materias.reduce((acc, current) => {
-      const items = current.materiasDetalle || [];
-      return acc + items.length;
-    }, 0);
-  };
-
-  if (loading) {
+  if (loading && carreras.length === 0) {
     return (
-      <div className="p-12 text-center flex flex-col justify-center items-center gap-4 bg-white border border-slate-200 rounded-2xl shadow-sm mt-6">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-        <p className="text-slate-500 font-semibold text-sm">Cargando asignaturas académicas...</p>
+      <div className="p-12 flex flex-col justify-center items-center gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-slate-500 text-xs font-semibold">Cargando materias académicas...</p>
       </div>
     );
   }
 
-  if (carreraSeleccionada) {
-    const activeSubjectsList = materiasMap[añoActivo] || [];
-
+  // Vista 1: Selector simple y limpio de carrera
+  if (!carreraSeleccionada) {
     return (
-      <div className="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setCarreraSeleccionada(null);
-                fetchCarreras(); // reload careers data to update subject counts
-              }}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors border border-slate-200 cursor-pointer"
-              title="Volver a Carreras"
-            >
-              <ArrowLeft className="h-5 w-5 text-slate-650" />
-            </button>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">Asignaturas: {carreraSeleccionada.nombre}</h2>
-              <p className="text-slate-500 text-sm mt-1">Configura el plan de materias y docentes por año académico.</p>
-            </div>
+      <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in pb-16">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary flex items-center justify-center font-bold">
+            <BookOpen className="w-5 h-5" />
           </div>
-
-          <button
-            onClick={handleSaveAll}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md font-bold text-sm cursor-pointer border border-transparent shrink-0 active:scale-95"
-          >
-            <Save className="h-4.5 w-4.5" />
-            {saving ? 'Guardando...' : 'Guardar Cambios'}
-          </button>
-        </div>
-
-        {/* Alert message banner */}
-        {mensaje.texto && (
-          <div className={`p-4 rounded-xl flex items-center gap-2.5 animate-fade-in ${
-            mensaje.tipo === 'error' 
-              ? 'bg-red-50 text-red-700 border border-red-200' 
-              : 'bg-blue-50 text-primary border border-blue-200'
-          }`}>
-            {mensaje.tipo === 'error' ? (
-              <AlertCircle className="h-5 w-5 text-red-500 animate-bounce" />
-            ) : (
-              <CheckCircle className="h-5 w-5 text-primary" />
-            )}
-            <span className="font-semibold text-sm">{mensaje.texto}</span>
-          </div>
-        )}
-
-        {/* Metricas SaaS de la Carrera Seleccionada */}
-        {(() => {
-          const allMats = Object.values(materiasMap).flat();
-          const totalMats = allMats.length;
-          const conDocente = allMats.filter(m => (m.profesor || '').trim() !== '').length;
-          const sinDocente = totalMats - conDocente;
-
-          return (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Materias en Plan</p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{totalMats} Asignaturas</h3>
-                  <span className="text-[11px] text-slate-400 font-medium">Todos los años formativos</span>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Con Docente Asignado</p>
-                  <h3 className="text-2xl font-bold text-emerald-600 mt-0.5">{conDocente}</h3>
-                  <span className="text-[11px] text-slate-400 font-medium">{totalMats > 0 ? Math.round((conDocente / totalMats) * 100) : 0}% de cobertura docente</span>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                  <UserCheck className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vacantes / Sin Asignar</p>
-                  <h3 className={`text-2xl font-bold mt-0.5 ${sinDocente > 0 ? 'text-amber-600' : 'text-slate-800'}`}>{sinDocente}</h3>
-                  <span className="text-[11px] text-slate-400 font-medium">Asignaturas pendientes de titular</span>
-                </div>
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${sinDocente > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'}`}>
-                  <UserX className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Subjects Management Grid - Full Width */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
           <div>
-            <span className="text-[10px] bg-blue-50 text-primary font-bold px-2.5 py-1 rounded-full uppercase border border-blue-150/40">
-              Plan de Estudios Activo
-            </span>
-            <h3 className="text-lg font-extrabold text-slate-800 mt-2">
-              Asignaturas de {carreraSeleccionada.nombre}
-            </h3>
+            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">Plan de Materias y Docentes</h2>
+            <p className="text-slate-500 text-xs">Selecciona una carrera para asignar asignaturas por año y docentes a cargo.</p>
           </div>
+        </div>
 
-          {/* Year tabs (strictly driven by carreraSeleccionada.duracion) */}
-          <div className="flex gap-2 overflow-x-auto pb-1 border-b border-slate-100">
-            {getYearsList(carreraSeleccionada.duracion).map((y) => {
-              const count = materiasMap[y]?.length || 0;
-              return (
-                <button
-                  key={y}
-                  onClick={() => {
-                    setAñoActivo(y);
-                    setEditingIndex(null);
-                  }}
-                  className={`px-4 py-2.5 border-b-2 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                    añoActivo === y
-                      ? 'border-primary text-primary font-black'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <span>{y}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                    añoActivo === y ? 'bg-blue-100 text-blue-900' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* List and add materias */}
-          <div className="space-y-4">
-            {/* Add New Subject */}
-            <div className="flex flex-col sm:flex-row gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                <input
-                  type="text"
-                  placeholder="Materia (ej: PROGRAMACIÓN I)"
-                  value={nuevaMateriaInput}
-                  onChange={(e) => setNuevaMateriaInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddMateria();
-                  }}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-primary text-xs font-bold text-slate-800 uppercase bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Profesor a cargo (ej: Ing. Juan Pérez)"
-                  value={nuevoProfesorInput}
-                  onChange={(e) => setNuevoProfesorInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddMateria();
-                  }}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-primary text-xs font-bold text-slate-800 bg-white"
-                />
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {carreras.map((c) => {
+            const totalMaterias = (c.materias || []).reduce((acc, y) => acc + (y.nombres?.length || 0), 0);
+            return (
               <button
-                onClick={handleAddMateria}
-                className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-primary text-white hover:bg-primary-dark rounded-xl transition-all font-bold text-xs cursor-pointer border border-transparent uppercase tracking-wider shrink-0 shadow-sm active:scale-95"
+                key={c.id}
+                onClick={() => handleSelectCarrera(c)}
+                className="bg-white p-5 rounded-2xl border border-slate-200/90 hover:border-primary/50 hover:shadow-md transition-all text-left flex flex-col justify-between h-44 group cursor-pointer"
               >
-                <Plus className="h-4 w-4" />
-                Agregar
+                <div>
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600">
+                    {c.tipo}
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-primary transition-colors mt-2 line-clamp-2">
+                    {c.nombre}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Duración: {c.duracion}</p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>{totalMaterias} Materias cargadas</span>
+                  <span className="text-primary font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    Gestionar &rarr;
+                  </span>
+                </div>
               </button>
-            </div>
-
-            {/* List of Subjects */}
-            <div className="bg-slate-50/30 rounded-2xl border border-slate-150 p-4 min-h-[250px] max-h-[450px] overflow-y-auto">
-              {activeSubjectsList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center min-h-[200px] text-center text-slate-400 italic text-xs font-medium">
-                  No hay materias cargadas para este año académico.
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {activeSubjectsList.map((item, idx) => {
-                    const isEditing = editingIndex === idx;
-
-                    return (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-3xs hover:shadow-2xs transition-all hover:border-slate-355"
-                      >
-                        {isEditing ? (
-                          <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
-                              <input
-                                type="text"
-                                value={editingNombre}
-                                onChange={(e) => setEditingNombre(e.target.value)}
-                                placeholder="Nombre de la Materia"
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 uppercase outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveEdit(idx);
-                                  if (e.key === 'Escape') setEditingIndex(null);
-                                }}
-                                autoFocus
-                              />
-                              <input
-                                type="text"
-                                value={editingProfesor}
-                                onChange={(e) => setEditingProfesor(e.target.value)}
-                                placeholder="Profesor"
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveEdit(idx);
-                                  if (e.key === 'Escape') setEditingIndex(null);
-                                }}
-                              />
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => handleSaveEdit(idx)}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
-                              >
-                                <Check className="h-4.5 w-4.5" />
-                              </button>
-                              <button
-                                onClick={() => setEditingIndex(null)}
-                                className="p-1.5 text-slate-455 hover:bg-slate-100 rounded"
-                              >
-                                <X className="h-4.5 w-4.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-black text-slate-700 uppercase tracking-wide">
-                                {item.nombre}
-                              </span>
-                              {item.profesor ? (
-                                <span className="text-[10px] font-bold text-primary bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full w-max">
-                                  Docente: {item.profesor}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-medium text-slate-400 italic">
-                                  Sin docente asignado
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => handleStartEdit(idx, item)}
-                                className="p-1.5 text-slate-450 hover:text-primary hover:bg-blue-50 rounded-lg transition-all border border-transparent hover:border-blue-100/50 cursor-pointer"
-                                title="Editar Materia y Docente"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleRemoveMateria(idx)}
-                                className="p-1.5 text-slate-450 hover:text-red-650 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100/50 cursor-pointer"
-                                title="Quitar de la lista"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
     );
   }
 
-  // Career Selector - Grid Layout (identical to Horarios and Exámenes selectors)
+  // Vista 2: Gestión Simplificada de la Carrera Seleccionada
+  const currentList = materiasMap[añoActivo] || [];
+  const filtradas = currentList.filter(m => 
+    m.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+    m.profesor.toLowerCase().includes(busqueda.toLowerCase())
+  );
+  const years = getYearsList(carreraSeleccionada.duracion);
+
+  const conDocente = currentList.filter(m => m.profesor && m.profesor.trim() !== '').length;
+  const sinDocente = currentList.length - conDocente;
+
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">Gestión de Asignaturas (Materias)</h2>
-        <p className="text-slate-500 text-sm mt-1">
-          Configura y organiza el catálogo de materias y profesores asignados para cada carrera.
-        </p>
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in pb-16">
+      {/* Barra Superior con botón Volver y Guardar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setCarreraSeleccionada(null)}
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
+            title="Volver a seleccionar carrera"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 leading-snug">{carreraSeleccionada.nombre}</h2>
+            <p className="text-xs text-slate-500 font-medium">Asignación de asignaturas y equipo docente por año académico</p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSaveAll}
+          disabled={saving}
+          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? 'Guardando...' : 'Guardar Todo'}
+        </button>
       </div>
 
       {mensaje.texto && (
-        <div className={`p-4 rounded-xl flex items-center gap-2.5 animate-fade-in ${
-          mensaje.tipo === 'error' 
-            ? 'bg-red-50 text-red-700 border border-red-200' 
-            : 'bg-blue-50 text-primary border border-blue-200'
+        <div className={`p-4 rounded-xl flex items-center justify-between gap-3 text-xs font-bold ${
+          mensaje.tipo === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
         }`}>
-          <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
-          <span className="font-semibold text-xs leading-relaxed">{mensaje.texto}</span>
+          <div className="flex items-center gap-2">
+            {mensaje.tipo === 'error' ? <AlertCircle className="w-4 h-4 text-red-500" /> : <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+            <span>{mensaje.texto}</span>
+          </div>
+          <button onClick={() => setMensaje({ tipo: '', texto: '' })} className="text-slate-400 hover:text-slate-700 font-bold">&times;</button>
         </div>
       )}
 
-      {/* Metricas Generales SaaS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Carreras con Plan</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{carreras.length} Carreras</h3>
-            <span className="text-[11px] text-slate-400 font-medium">Planes de estudio configurados</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <GraduationCap className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Asignaturas del IES</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
-              {carreras.reduce((sum, c) => sum + getMateriasCount(c), 0)} Materias
-            </h3>
-            <span className="text-[11px] text-slate-400 font-medium">Cátedras curriculares activas</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <BookOpen className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Promedio por Carrera</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
-              {carreras.length > 0 ? Math.round(carreras.reduce((sum, c) => sum + getMateriasCount(c), 0) / carreras.length) : 0} Materias
-            </h3>
-            <span className="text-[11px] text-slate-400 font-medium">Densidad curricular promedio</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-            <Layers className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      {/* Grid of career cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {carreras.map((carrera) => {
-          const mCount = getMateriasCount(carrera);
+      {/* Selector de Años tipo Píldoras Modernas */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {years.map((y) => {
+          const count = (materiasMap[y] || []).length;
+          const isActive = añoActivo === y;
           return (
             <button
-              key={carrera.id}
-              onClick={() => handleSelectCarrera(carrera)}
-              className="group w-full text-left bg-white p-5 rounded-2xl border border-slate-200 hover:border-primary/45 shadow-3xs hover:shadow-sm transition-all duration-300 flex flex-col justify-between h-48 cursor-pointer relative overflow-hidden"
+              key={y}
+              onClick={() => setAñoActivo(y)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? 'bg-primary text-white shadow-md shadow-primary/25'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
             >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none transform translate-x-6 -translate-y-6 group-hover:scale-125 transition-transform"></div>
-              
-              <div className="space-y-3">
-                <div className="h-10 w-10 bg-primary/5 group-hover:bg-primary/10 text-primary rounded-xl flex items-center justify-center transition-all duration-300">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 line-clamp-2 uppercase tracking-wide">
-                    {carrera.nombre}
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-1">
-                    {carrera.tipo} · {carrera.duracion}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500 group-hover:text-primary transition-all duration-300 w-full font-sans">
-                <span className="flex items-center gap-1.5">
-                  <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-primary transition-all shrink-0" />
-                  {mCount} {mCount === 1 ? 'Materia Configurada' : 'Materias Configuradas'}
-                </span>
-                <ChevronRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-              </div>
+              <span>{y}</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+              }`}>
+                {count}
+              </span>
             </button>
           );
         })}
+      </div>
+
+      {/* Contenido Principal: Formulario de Alta Rápida + Lista de Materias */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Columna Izquierda: Formulario Rápido de Alta */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4 h-fit">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Plus className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Agregar Materia a {añoActivo}</h3>
+          </div>
+
+          <form onSubmit={handleAddMateria} className="space-y-3">
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Nombre de la Asignatura</label>
+              <input
+                type="text"
+                placeholder="Ej: Programación III"
+                value={nuevaMateriaNombre}
+                onChange={(e) => setNuevaMateriaNombre(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Profesor/a a Cargo (Opcional)</label>
+              <input
+                type="text"
+                placeholder="Ej: Prof. Gómez, María"
+                value={nuevoProfesorNombre}
+                onChange={(e) => setNuevoProfesorNombre(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 bg-primary hover:bg-primary/95 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer mt-2"
+            >
+              + Agregar Asignatura
+            </button>
+          </form>
+
+          {/* Resumen del año */}
+          <div className="pt-3 border-t border-slate-100 space-y-2 text-xs">
+            <div className="flex justify-between text-slate-500 font-semibold">
+              <span>Total Materias:</span>
+              <strong className="text-slate-800">{currentList.length}</strong>
+            </div>
+            <div className="flex justify-between text-emerald-600 font-semibold">
+              <span>Con Docente Asignado:</span>
+              <strong>{conDocente}</strong>
+            </div>
+            <div className="flex justify-between text-amber-600 font-semibold">
+              <span>Sin Docente Asignado:</span>
+              <strong>{sinDocente}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Columna Derecha: Lista Simplificada con Edición Inmediata */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder={`Buscar en ${añoActivo}...`}
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <span className="text-xs text-slate-400 font-bold shrink-0">{filtradas.length} Asignaturas</span>
+          </div>
+
+          {filtradas.length === 0 ? (
+            <div className="bg-white p-12 text-center rounded-2xl border border-slate-200/90 shadow-2xs">
+              <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-700">No hay materias cargadas para {añoActivo}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Usa el formulario de la izquierda para agregar la primera asignatura.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {filtradas.map((materia, idx) => (
+                <div
+                  key={materia.nombre + idx}
+                  className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs hover:border-primary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                >
+                  <div className="space-y-0.5 flex-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                      {añoActivo}
+                    </span>
+                    <h4 className="text-sm font-bold text-slate-900">{materia.nombre}</h4>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex-1 sm:w-60">
+                      <input
+                        type="text"
+                        placeholder="Sin profesor asignado"
+                        value={materia.profesor}
+                        onChange={(e) => handleUpdateProfesor(idx, e.target.value)}
+                        className={`w-full px-3 py-1.5 border rounded-lg text-xs font-semibold outline-none transition-all ${
+                          materia.profesor && materia.profesor.trim() !== ''
+                            ? 'bg-emerald-50/50 border-emerald-200 text-emerald-800 focus:border-emerald-500'
+                            : 'bg-slate-50 border-slate-200 text-slate-500 focus:bg-white focus:border-primary'
+                        }`}
+                        title="Escribe directamente aquí el nombre del docente"
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteMateria(idx, materia.nombre)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="Quitar materia"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

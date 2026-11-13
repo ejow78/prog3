@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
@@ -7,16 +7,18 @@ import {
   Settings, Menu, X, BookOpen, Clock, ArrowRight, CheckCircle2, AlertCircle, 
   ShieldCheck, Database, Server, Sparkles, Plus, Trash2, Edit3, Search, 
   Terminal, Activity, ChevronLeft, ChevronRight, Check, Square, CalendarDays,
-  GraduationCap
+  GraduationCap, UserCheck
 } from 'lucide-react';
-import AdminCarreras from './AdminCarreras';
-import AdminPreinscripciones from './AdminPreinscripciones';
-import AdminMensajes from './AdminMensajes';
-import AdminExamenes from './AdminExamenes';
-import AdminFechasExamenes from './AdminFechasExamenes';
-import AdminMaterias from './AdminMaterias';
-import AdminHorarios from './AdminHorarios';
-import AdminGestionCentral from './AdminGestionCentral';
+
+// Lazy loading para arranque veloz y reducción drástica de memoria
+const AdminCarreras = lazy(() => import('./AdminCarreras'));
+const AdminPreinscripciones = lazy(() => import('./AdminPreinscripciones'));
+const AdminMensajes = lazy(() => import('./AdminMensajes'));
+const AdminExamenes = lazy(() => import('./AdminExamenes'));
+const AdminFechasExamenes = lazy(() => import('./AdminFechasExamenes'));
+const AdminMaterias = lazy(() => import('./AdminMaterias'));
+const AdminHorarios = lazy(() => import('./AdminHorarios'));
+const AdminGestionCentral = lazy(() => import('./AdminGestionCentral'));
 
 
 const Resumen = () => {
@@ -517,8 +519,22 @@ export default function Dashboard() {
       >
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">IES Admin</h1>
-            <p className="text-xs text-slate-400 mt-1">Panel de Control</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-white tracking-tight">IES Admin</h1>
+              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                admin?.role === 'superadmin'
+                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                  : admin?.role === 'admin'
+                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              }`}>
+                {admin?.role === 'superadmin' ? 'Superadmin' : admin?.role === 'admin' ? 'Admin' : 'Preceptor'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              {admin?.username || 'Panel de Control'}
+            </p>
           </div>
           <button className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <X className="h-6 w-6" />
@@ -581,20 +597,27 @@ export default function Dashboard() {
 
         {/* Dynamic Content */}
         <div className="flex-1 overflow-auto bg-slate-50 relative z-0">
-          <Routes>
-            <Route path="/" element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<Resumen />} />
-            <Route path="carreras" element={<AdminCarreras />} />
-            <Route path="materias" element={<AdminMaterias />} />
-            <Route path="horarios" element={<AdminHorarios />} />
-            <Route path="preinscripciones" element={<AdminPreinscripciones />} />
-            <Route path="mensajes" element={<AdminMensajes />} />
-            <Route path="examenes" element={<AdminExamenes />} />
-            <Route path="fechas-examenes" element={<AdminFechasExamenes />} />
-            {admin?.role === 'superadmin' && (
-              <Route path="gestion-central" element={<AdminGestionCentral />} />
-            )}
-          </Routes>
+          <Suspense fallback={
+            <div className="p-12 flex flex-col justify-center items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="text-slate-400 text-xs font-semibold">Cargando módulo...</p>
+            </div>
+          }>
+            <Routes>
+              <Route path="/" element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Resumen />} />
+              <Route path="carreras" element={<AdminCarreras />} />
+              <Route path="materias" element={<AdminMaterias />} />
+              <Route path="horarios" element={<AdminHorarios />} />
+              <Route path="preinscripciones" element={<AdminPreinscripciones />} />
+              <Route path="mensajes" element={<AdminMensajes />} />
+              <Route path="examenes" element={<AdminExamenes />} />
+              <Route path="fechas-examenes" element={<AdminFechasExamenes />} />
+              {admin?.role === 'superadmin' && (
+                <Route path="gestion-central" element={<AdminGestionCentral />} />
+              )}
+            </Routes>
+          </Suspense>
         </div>
       </main>
     </div>

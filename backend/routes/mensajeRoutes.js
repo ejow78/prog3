@@ -3,18 +3,20 @@ import {
   crearMensaje, 
   getMensajes, 
   toggleLeido, 
-  deleteMensaje 
+  deleteMensaje,
+  restoreMensaje
 } from '../controllers/mensajeController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Ruta pública para enviar el formulario de contacto
 router.post('/', crearMensaje);
 
-// Rutas protegidas para el administrador (dashboard)
-router.get('/', protect, getMensajes);
-router.put('/:id/leido', protect, toggleLeido);
-router.delete('/:id', protect, deleteMensaje);
+// Rutas protegidas para el personal académico
+router.get('/', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), getMensajes);
+router.put('/:id/leido', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), toggleLeido);
+router.delete('/:id', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), deleteMensaje);
+router.put('/:id/restore', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), restoreMensaje);
 
 export default router;

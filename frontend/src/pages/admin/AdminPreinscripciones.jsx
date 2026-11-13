@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Eye, Phone, Mail, FileText, Printer, MessageCircle, ExternalLink, Calendar, MapPin, User, GraduationCap } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Eye, Phone, Mail, FileText, Printer, MessageCircle, ExternalLink, Calendar, MapPin, User, GraduationCap, RotateCcw } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import SoftDeleteFilter from '../../components/admin/SoftDeleteFilter';
 
 export default function AdminPreinscripciones() {
   const [preinscripciones, setPreinscripciones] = useState([]);
@@ -13,11 +14,12 @@ export default function AdminPreinscripciones() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [preinscripcionSeleccionada, setPreinscripcionSeleccionada] = useState(null);
+  const [activeTab, setActiveTab] = useState('activos'); // 'activos' | 'papelera'
   const { token, admin } = useContext(AuthContext);
 
   const fetchPreinscripciones = async () => {
     try {
-      const response = await fetch('/api/preinscripciones', {
+      const response = await fetch('/api/preinscripciones?includeDeleted=true', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al obtener preinscripciones');
@@ -57,17 +59,17 @@ export default function AdminPreinscripciones() {
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
-  const eliminarPreinscripcion = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta preinscripción? Esta acción no se puede deshacer.')) return;
+  const eliminarPreinscripcion = async (id, nombreAspirante) => {
+    if (!window.confirm(`¿Enviar a la papelera la preinscripción de ${nombreAspirante || 'este aspirante'}? Podrás restaurarla en cualquier momento.`)) return;
     
     try {
       const response = await fetch(`/api/preinscripciones/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!response.ok) throw new Error('Error al eliminar');
+      if (!response.ok) throw new Error('Error al enviar a papelera');
       
-      setMensaje({ texto: 'Preinscripción eliminada correctamente', tipo: 'exito' });
+      setMensaje({ texto: 'Preinscripción enviada a la papelera de reciclaje', tipo: 'exito' });
       fetchPreinscripciones();
     } catch (error) {
       console.error(error);
@@ -77,9 +79,31 @@ export default function AdminPreinscripciones() {
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
+  const restaurarPreinscripcion = async (id, nombreAspirante) => {
+    try {
+      const response = await fetch(`/api/preinscripciones/${id}/restore`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al restaurar');
+
+      setMensaje({ texto: `Preinscripción de ${nombreAspirante || 'aspirante'} restaurada con éxito`, tipo: 'exito' });
+      fetchPreinscripciones();
+    } catch (error) {
+      console.error(error);
+      setMensaje({ texto: 'Error al restaurar preinscripción', tipo: 'error' });
+    }
+
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+  };
+
+  const activas = preinscripciones.filter(p => !p.isDeleted);
+  const papelera = preinscripciones.filter(p => p.isDeleted);
+  const listaBase = activeTab === 'activos' ? activas : papelera;
+
   const carrerasUnicas = ['Todas', ...new Set(preinscripciones.map(p => p.carrera))];
 
-  const filtradas = preinscripciones.filter(p => {
+  const filtradas = listaBase.filter(p => {
     const matchEstado = filtroEstado === 'Todas' || p.estado === filtroEstado;
     const matchCarrera = filtroCarrera === 'Todas' || p.carrera === filtroCarrera;
     
@@ -274,6 +298,15 @@ export default function AdminPreinscripciones() {
 
       {/* Search & Filters Card */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <SoftDeleteFilter
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            totalActivos={activas.length}
+            totalPapelera={papelera.length}
+          />
+        </div>
+
         <div className="relative w-full">
           <Search className="absolute left-3.5 top-2.5 h-5 w-5 text-slate-400" />
           <input
@@ -381,38 +414,51 @@ export default function AdminPreinscripciones() {
                         >
                           <Eye className="h-5 w-5" />
                         </button>
-                        {p.estado === 'Pendiente' ? (
+                        {p.isDeleted ? (
+                          <button
+                            onClick={() => restaurarPreinscripcion(p._id, `${p.apellido}, ${p.nombre}`)}
+                            className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-colors cursor-pointer"
+                            title="Restaurar aspirante"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            Restaurar
+                          </button>
+                        ) : (
                           <>
+                            {p.estado === 'Pendiente' ? (
+                              <>
+                                <button
+                                  onClick={() => cambiarEstado(p._id, 'Aprobada')}
+                                  className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors cursor-pointer"
+                                  title="Aprobar"
+                                >
+                                  <Check className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={() => cambiarEstado(p._id, 'Rechazada')}
+                                  className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors cursor-pointer"
+                                  title="Rechazar"
+                                >
+                                  <X className="h-5 w-5" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => cambiarEstado(p._id, 'Pendiente')}
+                                className="text-xs text-slate-400 hover:text-slate-600 underline mr-2 cursor-pointer"
+                              >
+                                Hacer Pendiente
+                              </button>
+                            )}
                             <button
-                              onClick={() => cambiarEstado(p._id, 'Aprobada')}
-                              className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 rounded-md transition-colors cursor-pointer"
-                              title="Aprobar"
+                              onClick={() => eliminarPreinscripcion(p._id, `${p.apellido}, ${p.nombre}`)}
+                              className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors cursor-pointer"
+                              title="Enviar a papelera"
                             >
-                              <Check className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => cambiarEstado(p._id, 'Rechazada')}
-                              className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md transition-colors cursor-pointer"
-                              title="Rechazar"
-                            >
-                              <X className="h-5 w-5" />
+                              <Trash2 className="h-5 w-5" />
                             </button>
                           </>
-                        ) : (
-                          <button
-                            onClick={() => cambiarEstado(p._id, 'Pendiente')}
-                            className="text-xs text-slate-400 hover:text-slate-600 underline mr-2 cursor-pointer"
-                          >
-                            Hacer Pendiente
-                          </button>
                         )}
-                        <button
-                          onClick={() => eliminarPreinscripcion(p._id)}
-                          className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors cursor-pointer"
-                          title="Eliminar registro"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
                       </div>
                     </td>
                   </tr>

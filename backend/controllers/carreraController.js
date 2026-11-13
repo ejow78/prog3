@@ -1,11 +1,13 @@
 import Carrera from '../models/Carrera.js';
 import { logAudit } from '../utils/auditLogger.js';
 
-// @desc    Obtener todas las carreras
+// @desc    Obtener todas las carreras (activas o incluir eliminadas si se pide)
 // @route   GET /api/carreras
 export const getCarreras = async (req, res) => {
   try {
-    const carreras = await Carrera.find({});
+    const includeDeleted = req.query.includeDeleted === 'true';
+    const query = includeDeleted ? {} : { isDeleted: { $ne: true } };
+    const carreras = await Carrera.find(query);
     res.json(carreras);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -76,20 +78,55 @@ export const createCarrera = async (req, res) => {
   }
 };
 
-// @desc    Eliminar una carrera
+// @desc    Eliminar una carrera (Soft Delete)
 // @route   DELETE /api/carreras/:id
 export const deleteCarrera = async (req, res) => {
   try {
     const { id } = req.params;
-    const carrera = await Carrera.findOneAndDelete({ id });
+    const carrera = await Carrera.findOneAndUpdate(
+      { id },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.admin ? `${req.admin.username} (${req.admin.role})` : 'Sistema'
+      },
+      { new: true }
+    );
 
     if (!carrera) {
       return res.status(404).json({ message: 'Carrera no encontrada' });
     }
 
-    await logAudit(req, 'ELIMINAR_CARRERA', 'Carreras', `Se eliminó la carrera: ${carrera.nombre} (ID: ${carrera.id})`);
+    await logAudit(req, 'ELIMINAR_CARRERA', 'Carreras', `Se envió a papelera la carrera: ${carrera.nombre} (ID: ${carrera.id})`);
 
-    res.json({ message: 'Carrera eliminada' });
+    res.json({ message: 'Carrera enviada a papelera de reciclaje', carrera });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Restaurar una carrera desde la papelera
+// @route   PUT /api/carreras/:id/restore
+export const restoreCarrera = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const carrera = await Carrera.findOneAndUpdate(
+      { id },
+      {
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null
+      },
+      { new: true }
+    );
+
+    if (!carrera) {
+      return res.status(404).json({ message: 'Carrera no encontrada' });
+    }
+
+    await logAudit(req, 'RESTAURAR_CARRERA', 'Carreras', `Se restauró la carrera: ${carrera.nombre} (ID: ${carrera.id})`);
+
+    res.json({ message: 'Carrera restaurada con éxito', carrera });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

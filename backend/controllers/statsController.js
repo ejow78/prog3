@@ -9,38 +9,53 @@ export const getStats = async (req, res) => {
     const settings = await SystemSettings.findOne({});
     const year = settings ? settings.activeYear : new Date().getFullYear();
     const startOfYear = new Date(year, 0, 1);
-    const query = { createdAt: { $gte: startOfYear } };
-
-    const totalPreinscripciones = await Preinscripcion.countDocuments(query);
-    const preinscripcionesPendientes = await Preinscripcion.countDocuments({ ...query, estado: 'Pendiente' });
-    const preinscripcionesAprobadas = await Preinscripcion.countDocuments({ ...query, estado: 'Aprobada' });
-    const preinscripcionesRechazadas = await Preinscripcion.countDocuments({ ...query, estado: 'Rechazada' });
     
-    const totalMensajesSinLeer = await Mensaje.countDocuments({ leido: false });
-    const totalMensajes = await Mensaje.countDocuments();
-    
-    const totalCarreras = await Carrera.countDocuments();
-    const carrerasTecnicaturas = await Carrera.countDocuments({ tipo: 'Tecnicatura' });
-    const carrerasProfesorados = await Carrera.countDocuments({ tipo: 'Profesorado' });
-    const carrerasCursos = await Carrera.countDocuments({ tipo: 'Curso' });
+    // Solo contar elementos activos (no eliminados lógicamente)
+    const baseQuery = { 
+      createdAt: { $gte: startOfYear },
+      isDeleted: { $ne: true }
+    };
+    const carrerasQuery = { isDeleted: { $ne: true } };
+    const mensajesQuery = { isDeleted: { $ne: true } };
 
-    const totalExamenes = await InscripcionExamen.countDocuments(query);
-    const examenesPendientes = await InscripcionExamen.countDocuments({ ...query, estado: 'Pendiente' });
-    const examenesAprobados = await InscripcionExamen.countDocuments({ ...query, estado: 'Aprobada' });
-    const examenesRechazados = await InscripcionExamen.countDocuments({ ...query, estado: 'Rechazada' });
-
-    // Obtener últimos registros para visualización directa
-    const ultimasPreinscripciones = await Preinscripcion.find(query)
-      .sort({ createdAt: -1 })
-      .limit(3);
-
-    const ultimosMensajes = await Mensaje.find()
-      .sort({ createdAt: -1 })
-      .limit(3);
-
-    const ultimosExamenes = await InscripcionExamen.find(query)
-      .sort({ createdAt: -1 })
-      .limit(3);
+    // Ejecución paralela de alta velocidad con Promise.all
+    const [
+      totalPreinscripciones,
+      preinscripcionesPendientes,
+      preinscripcionesAprobadas,
+      preinscripcionesRechazadas,
+      totalMensajesSinLeer,
+      totalMensajes,
+      totalCarreras,
+      carrerasTecnicaturas,
+      carrerasProfesorados,
+      carrerasCursos,
+      totalExamenes,
+      examenesPendientes,
+      examenesAprobados,
+      examenesRechazados,
+      ultimasPreinscripciones,
+      ultimosMensajes,
+      ultimosExamenes
+    ] = await Promise.all([
+      Preinscripcion.countDocuments(baseQuery),
+      Preinscripcion.countDocuments({ ...baseQuery, estado: 'Pendiente' }),
+      Preinscripcion.countDocuments({ ...baseQuery, estado: 'Aprobada' }),
+      Preinscripcion.countDocuments({ ...baseQuery, estado: 'Rechazada' }),
+      Mensaje.countDocuments({ ...mensajesQuery, leido: false }),
+      Mensaje.countDocuments(mensajesQuery),
+      Carrera.countDocuments(carrerasQuery),
+      Carrera.countDocuments({ ...carrerasQuery, tipo: 'Tecnicatura' }),
+      Carrera.countDocuments({ ...carrerasQuery, tipo: 'Profesorado' }),
+      Carrera.countDocuments({ ...carrerasQuery, tipo: 'Curso' }),
+      InscripcionExamen.countDocuments(baseQuery),
+      InscripcionExamen.countDocuments({ ...baseQuery, estado: 'Pendiente' }),
+      InscripcionExamen.countDocuments({ ...baseQuery, estado: 'Aprobada' }),
+      InscripcionExamen.countDocuments({ ...baseQuery, estado: 'Rechazada' }),
+      Preinscripcion.find(baseQuery).sort({ createdAt: -1 }).limit(3),
+      Mensaje.find(mensajesQuery).sort({ createdAt: -1 }).limit(3),
+      InscripcionExamen.find(baseQuery).sort({ createdAt: -1 }).limit(3)
+    ]);
 
     res.json({
       preinscripciones: {

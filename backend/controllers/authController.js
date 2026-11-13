@@ -28,11 +28,15 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'El correo electrónico ya está en uso' });
     }
 
+    // Sanitizar y validar rol permitido
+    const validRoles = ['superadmin', 'admin', 'preceptor'];
+    const assignedRole = validRoles.includes(role) ? role : 'preceptor';
+
     const admin = await Admin.create({
       username,
       email,
       password,
-      role: role || 'admin'
+      role: assignedRole
     });
 
     if (admin) {
@@ -108,11 +112,14 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ message: 'El correo electrónico ya está en uso.' });
     }
 
+    const validRoles = ['superadmin', 'admin', 'preceptor'];
+    const assignedRole = validRoles.includes(role) ? role : 'preceptor';
+
     const newUser = await Admin.create({
       username,
       email,
       password,
-      role: role || 'admin'
+      role: assignedRole
     });
 
     await logAudit(req, 'CREAR_ADMINISTRADOR', 'Seguridad', `Se creó la cuenta del administrador: ${newUser.username} (${newUser.role})`);

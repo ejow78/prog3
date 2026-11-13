@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Mail, MailOpen, Trash2, AlertCircle } from 'lucide-react';
+import { Mail, MailOpen, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
+import SoftDeleteFilter from '../../components/admin/SoftDeleteFilter';
 
 export default function AdminMensajes() {
   const [mensajes, setMensajes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mensajeUI, setMensajeUI] = useState({ texto: '', tipo: '' });
+  const [activeTab, setActiveTab] = useState('activos'); // 'activos' | 'papelera'
   const { token } = useContext(AuthContext);
 
   const fetchMensajes = async () => {
     try {
-      const response = await fetch('/api/mensajes', {
+      const response = await fetch('/api/mensajes?includeDeleted=true', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al obtener mensajes');
@@ -50,7 +52,7 @@ export default function AdminMensajes() {
   };
 
   const eliminarMensaje = async (id) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) return;
+    if (!window.confirm('¿Enviar este mensaje a la papelera de reciclaje? Podrás restaurarlo si lo deseas.')) return;
     
     try {
       const response = await fetch(`/api/mensajes/${id}`, {
@@ -59,7 +61,7 @@ export default function AdminMensajes() {
       });
       if (!response.ok) throw new Error('Error al eliminar el mensaje');
       
-      setMensajeUI({ texto: 'Mensaje eliminado', tipo: 'exito' });
+      setMensajeUI({ texto: 'Mensaje enviado a papelera', tipo: 'exito' });
       fetchMensajes();
     } catch (error) {
       console.error(error);
@@ -67,6 +69,27 @@ export default function AdminMensajes() {
     }
     setTimeout(() => setMensajeUI({ texto: '', tipo: '' }), 3000);
   };
+
+  const restaurarMensaje = async (id) => {
+    try {
+      const response = await fetch(`/api/mensajes/${id}/restore`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al restaurar mensaje');
+
+      setMensajeUI({ texto: 'Mensaje restaurado con éxito', tipo: 'exito' });
+      fetchMensajes();
+    } catch (error) {
+      console.error(error);
+      setMensajeUI({ texto: 'Error al restaurar el mensaje', tipo: 'error' });
+    }
+    setTimeout(() => setMensajeUI({ texto: '', tipo: '' }), 3000);
+  };
+
+  const activas = mensajes.filter(m => !m.isDeleted);
+  const papelera = mensajes.filter(m => m.isDeleted);
+  const listaBase = activeTab === 'activos' ? activas : papelera;
 
   if (loading) {
     return (
@@ -78,9 +101,18 @@ export default function AdminMensajes() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-800">Bandeja de Mensajes</h2>
-        <p className="text-slate-500 text-sm mt-1">Lee y gestiona las consultas recibidas desde la página de contacto.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Bandeja de Mensajes</h2>
+          <p className="text-slate-500 text-sm mt-1">Lee y gestiona las consultas recibidas desde la página de contacto.</p>
+        </div>
+
+        <SoftDeleteFilter
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          totalActivos={activas.length}
+          totalPapelera={papelera.length}
+        />
       </div>
 
       {mensajeUI.texto && (
@@ -91,13 +123,13 @@ export default function AdminMensajes() {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {mensajes.length === 0 ? (
+        {listaBase.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
-            No hay mensajes en la bandeja de entrada.
+            {activeTab === 'papelera' ? 'La papelera de mensajes está vacía.' : 'No hay mensajes en la bandeja de entrada.'}
           </div>
         ) : (
           <div className="divide-y divide-slate-200">
-            {mensajes.map((msg) => (
+            {listaBase.map((msg) => (
               <div 
                 key={msg._id} 
                 className={`p-6 transition-colors ${msg.leido ? 'bg-white hover:bg-slate-50' : 'bg-blue-50/50 hover:bg-blue-50'}`}
@@ -127,27 +159,38 @@ export default function AdminMensajes() {
                   </div>
                   
                   <div className="flex items-center gap-2 md:flex-col justify-end shrink-0 border-t md:border-t-0 border-slate-100 pt-4 md:pt-0 mt-4 md:mt-0">
-                    <button
-                      onClick={() => toggleLeido(msg._id, msg.leido)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors w-full md:w-auto justify-center ${
-                        msg.leido 
-                          ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' 
-                          : 'bg-primary/10 text-primary hover:bg-primary/20'
-                      }`}
-                    >
-                      {msg.leido ? (
-                        <><MailOpen className="h-4 w-4" /> Marcar como no leído</>
-                      ) : (
-                        <><Mail className="h-4 w-4" /> Marcar como leído</>
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={() => eliminarMensaje(msg._id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md text-sm font-medium transition-colors w-full md:w-auto justify-center"
-                    >
-                      <Trash2 className="h-4 w-4" /> Eliminar
-                    </button>
+                    {msg.isDeleted ? (
+                      <button
+                        onClick={() => restaurarMensaje(msg._id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium transition-colors w-full md:w-auto justify-center cursor-pointer"
+                      >
+                        <RotateCcw className="h-4 w-4" /> Restaurar
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => toggleLeido(msg._id, msg.leido)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors w-full md:w-auto justify-center ${
+                            msg.leido 
+                              ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' 
+                              : 'bg-primary/10 text-primary hover:bg-primary/20'
+                          }`}
+                        >
+                          {msg.leido ? (
+                            <><MailOpen className="h-4 w-4" /> Marcar como no leído</>
+                          ) : (
+                            <><Mail className="h-4 w-4" /> Marcar como leído</>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={() => eliminarMensaje(msg._id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-md text-sm font-medium transition-colors w-full md:w-auto justify-center cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" /> Eliminar
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

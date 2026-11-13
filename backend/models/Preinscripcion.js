@@ -42,6 +42,18 @@ const preinscripcionSchema = new mongoose.Schema({
     type: String,
     enum: ['Pendiente', 'Aprobada', 'Rechazada'],
     default: 'Pendiente'
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true // Esto crea automáticamente createdAt y updatedAt con la fecha y hora

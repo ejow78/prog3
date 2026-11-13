@@ -26,3 +26,18 @@ export const protect = async (req, res, next) => {
     res.status(401).json({ message: 'No autorizado, no hay token' });
   }
 };
+
+// Middleware para autorizar según roles
+export const authorizeRoles = (...rolesPermitidos) => {
+  return (req, res, next) => {
+    if (!req.admin) {
+      return res.status(401).json({ message: 'No autenticado' });
+    }
+    if (!rolesPermitidos.includes(req.admin.role)) {
+      return res.status(403).json({ 
+        message: `Acceso denegado: El rol '${req.admin.role}' no tiene permisos para esta acción` 
+      });
+    }
+    next();
+  };
+};

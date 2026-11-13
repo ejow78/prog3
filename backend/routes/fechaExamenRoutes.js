@@ -5,16 +5,16 @@ import {
   updateFechaExamen, 
   deleteFechaExamen 
 } from '../controllers/fechaExamenController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.route('/')
   .get(getFechasExamenes)
-  .post(protect, crearFechaExamen);
+  .post(protect, authorizeRoles('superadmin', 'admin', 'preceptor'), crearFechaExamen);
 
 router.route('/:id')
-  .put(protect, updateFechaExamen)
-  .delete(protect, deleteFechaExamen);
+  .put(protect, authorizeRoles('superadmin', 'admin', 'preceptor'), updateFechaExamen)
+  .delete(protect, authorizeRoles('superadmin', 'admin', 'preceptor'), deleteFechaExamen);
 
 export default router;

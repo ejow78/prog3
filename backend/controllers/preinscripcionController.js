@@ -67,7 +67,11 @@ export const getPreinscripciones = async (req, res) => {
     const settings = await SystemSettings.findOne({});
     const year = settings ? settings.activeYear : new Date().getFullYear();
     const startOfYear = new Date(year, 0, 1);
-    const query = { createdAt: { $gte: startOfYear } };
+    const includeDeleted = req.query.includeDeleted === 'true';
+    const query = { 
+      createdAt: { $gte: startOfYear },
+      ...(includeDeleted ? {} : { isDeleted: { $ne: true } })
+    };
     const preinscripciones = await Preinscripcion.find(query).sort({ createdAt: -1 }); // Las más recientes primero
     res.json(preinscripciones);
   } catch (error) {
@@ -106,16 +110,50 @@ export const updateEstadoPreinscripcion = async (req, res) => {
   }
 };
 
-// Borrar una preinscripción
+// Borrado lógico (Soft delete) de una preinscripción
 export const deletePreinscripcion = async (req, res) => {
   try {
-    const preinscripcion = await Preinscripcion.findByIdAndDelete(req.params.id);
+    const preinscripcion = await Preinscripcion.findByIdAndUpdate(
+      req.params.id,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.admin ? `${req.admin.username} (${req.admin.role})` : 'Sistema'
+      },
+      { new: true }
+    );
+
     if (!preinscripcion) {
       return res.status(404).json({ message: 'Preinscripción no encontrada' });
     }
-    await logAudit(req, 'ELIMINAR_PREINSCRIPCION', 'Preinscripciones', `Se eliminó la preinscripción de ${preinscripcion.nombre} ${preinscripcion.apellido} (${preinscripcion.carrera})`);
-    res.json({ message: 'Preinscripción eliminada correctamente' });
+
+    await logAudit(req, 'ELIMINAR_PREINSCRIPCION', 'Preinscripciones', `Se envió a papelera la preinscripción de ${preinscripcion.nombre} ${preinscripcion.apellido} (${preinscripcion.carrera})`);
+    res.json({ message: 'Preinscripción enviada a papelera de reciclaje', preinscripcion });
   } catch (error) {
     res.status(500).json({ message: 'Error al eliminar la preinscripción', error: error.message });
+  }
+};
+
+// Restaurar preinscripción desde la papelera
+export const restorePreinscripcion = async (req, res) => {
+  try {
+    const preinscripcion = await Preinscripcion.findByIdAndUpdate(
+      req.params.id,
+      {
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null
+      },
+      { new: true }
+    );
+
+    if (!preinscripcion) {
+      return res.status(404).json({ message: 'Preinscripción no encontrada' });
+    }
+
+    await logAudit(req, 'RESTAURAR_PREINSCRIPCION', 'Preinscripciones', `Se restauró la preinscripción de ${preinscripcion.nombre} ${preinscripcion.apellido} (${preinscripcion.carrera})`);
+    res.json({ message: 'Preinscripción restaurada correctamente', preinscripcion });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al restaurar la preinscripción', error: error.message });
   }
 };

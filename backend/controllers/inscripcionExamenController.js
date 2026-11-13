@@ -109,7 +109,11 @@ export const getInscripciones = async (req, res) => {
     const settings = await SystemSettings.findOne({});
     const year = settings ? settings.activeYear : new Date().getFullYear();
     const startOfYear = new Date(year, 0, 1);
-    const query = { createdAt: { $gte: startOfYear } };
+    const includeDeleted = req.query.includeDeleted === 'true';
+    const query = { 
+      createdAt: { $gte: startOfYear },
+      ...(includeDeleted ? {} : { isDeleted: { $ne: true } })
+    };
     const inscripciones = await InscripcionExamen.find(query).sort({ createdAt: -1 });
     res.json(inscripciones);
   } catch (error) {
@@ -148,16 +152,46 @@ export const updateEstadoInscripcion = async (req, res) => {
   }
 };
 
-// Eliminar una inscripción
+// Borrado lógico (Soft delete) de una inscripción
 export const deleteInscripcion = async (req, res) => {
   try {
-    const inscripcion = await InscripcionExamen.findByIdAndDelete(req.params.id);
+    const inscripcion = await InscripcionExamen.findByIdAndUpdate(
+      req.params.id,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.admin ? `${req.admin.username} (${req.admin.role})` : 'Sistema'
+      },
+      { new: true }
+    );
     if (!inscripcion) {
       return res.status(404).json({ message: 'Inscripción no encontrada' });
     }
-    await logAudit(req, 'ELIMINAR_EXAMEN', 'Exámenes', `Se eliminó la inscripción a exámenes de ${inscripcion.nombre} ${inscripcion.apellido} (${inscripcion.carrera} - materias: ${inscripcion.materias.join(', ')})`);
-    res.json({ message: 'Inscripción a examen eliminada correctamente' });
+    await logAudit(req, 'ELIMINAR_EXAMEN', 'Exámenes', `Se envió a papelera la inscripción a exámenes de ${inscripcion.nombre} ${inscripcion.apellido} (${inscripcion.carrera} - materias: ${inscripcion.materias.join(', ')})`);
+    res.json({ message: 'Inscripción a examen enviada a papelera de reciclaje', inscripcion });
   } catch (error) {
     res.status(500).json({ message: 'Error al eliminar la inscripción', error: error.message });
+  }
+};
+
+// Restaurar inscripción desde la papelera
+export const restoreInscripcion = async (req, res) => {
+  try {
+    const inscripcion = await InscripcionExamen.findByIdAndUpdate(
+      req.params.id,
+      {
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null
+      },
+      { new: true }
+    );
+    if (!inscripcion) {
+      return res.status(404).json({ message: 'Inscripción no encontrada' });
+    }
+    await logAudit(req, 'RESTAURAR_EXAMEN', 'Exámenes', `Se restauró la inscripción a exámenes de ${inscripcion.nombre} ${inscripcion.apellido} (${inscripcion.carrera})`);
+    res.json({ message: 'Inscripción a examen restaurada correctamente', inscripcion });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al restaurar la inscripción', error: error.message });
   }
 };

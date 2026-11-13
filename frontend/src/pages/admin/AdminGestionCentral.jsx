@@ -273,12 +273,15 @@ export default function AdminGestionCentral() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-slate-650 font-medium">{user.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border uppercase tracking-wider ${user.role === 'superadmin'
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border uppercase tracking-wider ${
+                            user.role === 'superadmin'
                             ? 'bg-red-50 text-red-700 border-red-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                            : user.role === 'admin'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           }`}>
                           <ShieldCheck className="h-3.5 w-3.5" />
-                          {user.role === 'superadmin' ? 'Superadmin' : 'Admin'}
+                          {user.role === 'superadmin' ? 'Superadmin' : user.role === 'admin' ? 'Admin' : 'Preceptor/a'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-medium">
@@ -387,7 +390,8 @@ export default function AdminGestionCentral() {
                     disabled={editingUser && editingUser._id === currentAdmin._id}
                     className="px-3.5 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary/45 focus:border-primary text-sm bg-white font-medium text-slate-700 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   >
-                    <option value="admin">Administrador estándar (Admin)</option>
+                    <option value="preceptor">Preceptor/a (Gestión de alumnos, inscripciones y horarios)</option>
+                    <option value="admin">Administrador académico (Admin)</option>
                     <option value="superadmin">Superusuario de Control (Superadmin)</option>
                   </select>
                 </div>

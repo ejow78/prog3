@@ -19,7 +19,9 @@ export const crearMensaje = async (req, res) => {
 // Obtener todos los mensajes (Para el admin dashboard)
 export const getMensajes = async (req, res) => {
   try {
-    const mensajes = await Mensaje.find({}).sort({ createdAt: -1 }); // Los más recientes primero
+    const includeDeleted = req.query.includeDeleted === 'true';
+    const query = includeDeleted ? {} : { isDeleted: { $ne: true } };
+    const mensajes = await Mensaje.find(query).sort({ createdAt: -1 }); // Los más recientes primero
     res.json(mensajes);
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener los mensajes', error: error.message });
@@ -53,16 +55,46 @@ export const toggleLeido = async (req, res) => {
   }
 };
 
-// Borrar un mensaje
+// Borrado lógico (Soft delete) de un mensaje
 export const deleteMensaje = async (req, res) => {
   try {
-    const mensaje = await Mensaje.findByIdAndDelete(req.params.id);
+    const mensaje = await Mensaje.findByIdAndUpdate(
+      req.params.id,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.admin ? `${req.admin.username} (${req.admin.role})` : 'Sistema'
+      },
+      { new: true }
+    );
     if (!mensaje) {
       return res.status(404).json({ message: 'Mensaje no encontrado' });
     }
-    await logAudit(req, 'ELIMINAR_MENSAJE', 'Mensajes', `Se eliminó el mensaje de ${mensaje.nombre} ${mensaje.apellido || ''} (Email: ${mensaje.email})`);
-    res.json({ message: 'Mensaje eliminado correctamente' });
+    await logAudit(req, 'ELIMINAR_MENSAJE', 'Mensajes', `Se envió a papelera el mensaje de ${mensaje.nombre} ${mensaje.apellido || ''} (Email: ${mensaje.email})`);
+    res.json({ message: 'Mensaje enviado a papelera de reciclaje', mensaje });
   } catch (error) {
     res.status(500).json({ message: 'Error al eliminar el mensaje', error: error.message });
+  }
+};
+
+// Restaurar mensaje desde la papelera
+export const restoreMensaje = async (req, res) => {
+  try {
+    const mensaje = await Mensaje.findByIdAndUpdate(
+      req.params.id,
+      {
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null
+      },
+      { new: true }
+    );
+    if (!mensaje) {
+      return res.status(404).json({ message: 'Mensaje no encontrado' });
+    }
+    await logAudit(req, 'RESTAURAR_MENSAJE', 'Mensajes', `Se restauró el mensaje de ${mensaje.nombre} ${mensaje.apellido || ''}`);
+    res.json({ message: 'Mensaje restaurado correctamente', mensaje });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al restaurar el mensaje', error: error.message });
   }
 };

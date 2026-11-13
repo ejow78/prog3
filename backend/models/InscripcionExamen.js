@@ -42,6 +42,18 @@ const inscripcionExamenSchema = new mongoose.Schema({
     type: String,
     enum: ['Pendiente', 'Aprobada', 'Rechazada'],
     default: 'Pendiente'
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
