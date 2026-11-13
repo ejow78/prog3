@@ -123,26 +123,6 @@ const Resumen = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 animate-fade-in pb-12">
-      {/* 1. Welcome Banner */}
-      <div className="bg-slate-900 text-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 rounded-full text-xs font-semibold text-slate-300 border border-slate-700">
-              Panel de Control
-            </div>
-            {admin?.role === 'superadmin' && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-950/40 text-red-300 border border-red-900/50 rounded-full text-xs font-bold shadow-sm">
-                <ShieldCheck className="h-3.5 w-3.5 text-red-400" />
-                Modo: SuperUsuario
-              </div>
-            )}
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {getGreeting()}, <span className="text-sky-300 font-semibold">{admin?.username || 'Administrador'}</span>!
-          </h2>
-        </div>
-      </div>
-
       {/* 3. Analytics Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Carreras Card */}
@@ -517,24 +497,10 @@ export default function Dashboard() {
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+        <div className="p-5 border-b border-slate-800 flex justify-between items-center">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white tracking-tight">IES Admin</h1>
-              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                admin?.role === 'superadmin'
-                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                  : admin?.role === 'admin'
-                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-              }`}>
-                {admin?.role === 'superadmin' ? 'Superadmin' : admin?.role === 'admin' ? 'Admin' : 'Preceptor'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              {admin?.username || 'Panel de Control'}
-            </p>
+            <h1 className="text-xl font-black text-white tracking-tight">IES Admin</h1>
+            <p className="text-[11px] text-slate-400 font-medium">Sistema de Gestión Académica</p>
           </div>
           <button className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
             <X className="h-6 w-6" />
@@ -567,12 +533,40 @@ export default function Dashboard() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800 space-y-3">
+          {/* Tarjeta de Usuario y Rol */}
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${
+              admin?.role === 'superadmin'
+                ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                : admin?.role === 'admin'
+                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+            }`}>
+              {admin?.username ? admin.username.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate leading-tight">
+                {admin?.username || 'Usuario'}
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                  admin?.role === 'superadmin' ? 'bg-red-400' : admin?.role === 'admin' ? 'bg-blue-400' : 'bg-emerald-400'
+                }`}></span>
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                  {admin?.role === 'superadmin' ? 'Superadmin' : admin?.role === 'admin' ? 'Admin' : 'Preceptor/a'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Botón de Cerrar Sesión con estilo de Botón Real */}
           <button
             onClick={handleLogout}
-            className="flex items-center px-4 py-3 text-slate-300 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors w-full"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 hover:text-red-200 border border-red-800/40 rounded-xl transition-all w-full text-xs font-bold cursor-pointer shadow-sm active:scale-98"
           >
-            Cerrar Sesión
+            <LogOut className="h-4 w-4" />
+            <span>Cerrar Sesión</span>
           </button>
         </div>
       </aside>
