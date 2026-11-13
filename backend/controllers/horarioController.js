@@ -136,3 +136,51 @@ export const deleteHorario = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar horario', error: error.message });
   }
 };
+
+// @desc    Restaurar horario de la papelera
+// @route   PUT /api/horarios/:id/restore
+export const restoreHorario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await Horario.findByIdAndUpdate(
+      id,
+      { isDeleted: false, deletedAt: null, deletedBy: null },
+      { new: true }
+    );
+    if (!doc) {
+      return res.status(404).json({ message: 'Horario no encontrado' });
+    }
+    await logAudit(req, 'RESTAURAR_HORARIOS', 'Horarios', `Se restauró el horario de ${doc.carreraNombre} (${doc.año})`);
+    res.json({ message: 'Horario restaurado con éxito', horario: doc });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al restaurar horario', error: error.message });
+  }
+};
+
+// @desc    Eliminar definitivamente un horario (Hard Delete)
+// @route   DELETE /api/horarios/:id/force
+export const forceDeleteHorario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await Horario.findByIdAndDelete(id);
+    if (!doc) {
+      return res.status(404).json({ message: 'Horario no encontrado' });
+    }
+    await logAudit(req, 'ELIMINAR_HORARIOS_DEFINITIVO', 'Horarios', `Se eliminó definitivamente el horario de ${doc.carreraNombre} (${doc.año})`);
+    res.json({ message: 'Horario eliminado de forma permanente' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar definitivamente el horario', error: error.message });
+  }
+};
+
+// @desc    Vaciar papelera de horarios
+// @route   DELETE /api/horarios/trash/empty
+export const emptyTrashHorarios = async (req, res) => {
+  try {
+    const result = await Horario.deleteMany({ isDeleted: true });
+    await logAudit(req, 'VACIAR_PAPELERA_HORARIOS', 'Horarios', `Se vació la papelera de horarios (${result.deletedCount} eliminados)`);
+    res.json({ message: `Se eliminaron ${result.deletedCount} horarios de la papelera permanentemente` });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al vaciar la papelera', error: error.message });
+  }
+};

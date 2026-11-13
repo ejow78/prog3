@@ -197,3 +197,31 @@ export const restoreMateria = async (req, res) => {
     res.status(500).json({ message: 'Error al restaurar materia', error: error.message });
   }
 };
+
+// @desc    Eliminar definitivamente una materia
+// @route   DELETE /api/materias/:id/force
+export const forceDeleteMateria = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mat = await Materia.findByIdAndDelete(id);
+    if (!mat) {
+      return res.status(404).json({ message: 'Materia no encontrada' });
+    }
+    await logAudit(req, 'ELIMINAR_MATERIA_DEFINITIVA', 'Materias', `Se eliminó definitivamente la materia: ${mat.nombre} (${mat.carreraNombre})`);
+    res.json({ message: 'Materia eliminada de forma permanente' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar definitivamente la materia', error: error.message });
+  }
+};
+
+// @desc    Vaciar papelera de materias
+// @route   DELETE /api/materias/trash/empty
+export const emptyTrashMaterias = async (req, res) => {
+  try {
+    const result = await Materia.deleteMany({ isDeleted: true });
+    await logAudit(req, 'VACIAR_PAPELERA_MATERIAS', 'Materias', `Se vació la papelera de materias (${result.deletedCount} eliminadas)`);
+    res.json({ message: `Se eliminaron ${result.deletedCount} materias de la papelera permanentemente` });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al vaciar la papelera', error: error.message });
+  }
+};

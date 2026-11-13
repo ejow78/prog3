@@ -15,7 +15,38 @@ export default function AdminPreinscripciones() {
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [preinscripcionSeleccionada, setPreinscripcionSeleccionada] = useState(null);
   const [activeTab, setActiveTab] = useState('activos'); // 'activos' | 'papelera'
+  const [settings, setSettings] = useState({ preinscripcionesAbiertas: true });
   const { token, admin } = useContext(AuthContext);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleTogglePeriodo = async () => {
+    try {
+      const res = await fetch('/api/settings/toggle/preinscripcionesAbiertas', {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data.settings);
+        setMensaje({ texto: data.message, tipo: 'exito' });
+        setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setMensaje({ texto: 'Error al cambiar periodo', tipo: 'error' });
+    }
+  };
 
   const fetchPreinscripciones = async () => {
     try {
@@ -35,6 +66,7 @@ export default function AdminPreinscripciones() {
 
   useEffect(() => {
     fetchPreinscripciones();
+    fetchSettings();
   }, []);
 
   const cambiarEstado = async (id, nuevoEstado) => {
@@ -94,6 +126,45 @@ export default function AdminPreinscripciones() {
       setMensaje({ texto: 'Error al restaurar preinscripción', tipo: 'error' });
     }
 
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+  };
+
+  const eliminarDefinitivoPreinscripcion = async (id, nombreAspirante) => {
+    if (!window.confirm(`¿ELIMINAR DEFINITIVAMENTE la preinscripción de ${nombreAspirante || 'este aspirante'}?\n\nEsta acción NO se puede deshacer y borrará el registro de la base de datos por completo.`)) return;
+
+    try {
+      const response = await fetch(`/api/preinscripciones/${id}/force`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al eliminar definitivamente');
+
+      setMensaje({ texto: 'Preinscripción eliminada permanentemente.', tipo: 'exito' });
+      fetchPreinscripciones();
+    } catch (error) {
+      console.error(error);
+      setMensaje({ texto: 'Error al eliminar definitivamente.', tipo: 'error' });
+    }
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+  };
+
+  const vaciarPapeleraPreinscripciones = async () => {
+    if (!window.confirm(`¿VACIAR TODA LA PAPELERA DE PREINSCRIPCIONES?\n\nSe eliminarán de forma irreversible todos los registros actualmente en la papelera.`)) return;
+
+    try {
+      const response = await fetch('/api/preinscripciones/trash/empty', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al vaciar la papelera');
+
+      const data = await response.json();
+      setMensaje({ texto: data.message || 'Papelera vaciada correctamente.', tipo: 'exito' });
+      fetchPreinscripciones();
+    } catch (error) {
+      console.error(error);
+      setMensaje({ texto: 'Error al vaciar la papelera.', tipo: 'error' });
+    }
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
@@ -289,6 +360,43 @@ export default function AdminPreinscripciones() {
         </div>
       </div>
 
+      {/* Banner de Control de Estado de Preinscripciones */}
+      <div className={`p-4 rounded-2xl mb-6 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+        settings.preinscripcionesAbiertas
+          ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+          : 'bg-amber-50/60 border-amber-200 text-amber-900'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-3 h-3 rounded-full ${
+            settings.preinscripcionesAbiertas ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+          }`} />
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-wider">
+              Periodo de Ingreso {settings.activeYear || 2026}:
+              <strong className="ml-1.5 underline">
+                {settings.preinscripcionesAbiertas ? 'Preinscripciones Habilitadas' : 'Preinscripciones Cerradas'}
+              </strong>
+            </p>
+            <p className="text-xs opacity-80 mt-0.5">
+              {settings.preinscripcionesAbiertas
+                ? 'El formulario público está recibiendo nuevas solicitudes de aspirantes.'
+                : 'El formulario público se encuentra bloqueado temporalmente.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleTogglePeriodo}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+            settings.preinscripcionesAbiertas
+              ? 'bg-amber-200 hover:bg-amber-300 text-amber-900'
+              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+          }`}
+        >
+          {settings.preinscripcionesAbiertas ? 'Cerrar Periodo' : 'Abrir Periodo'}
+        </button>
+      </div>
+
       {mensaje.texto && (
         <div className={`p-4 rounded-lg mb-6 flex items-center gap-2 ${mensaje.tipo === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
           <AlertCircle className="h-5 w-5 animate-pulse text-current" />
@@ -305,6 +413,16 @@ export default function AdminPreinscripciones() {
             totalActivos={activas.length}
             totalPapelera={papelera.length}
           />
+
+          {activeTab === 'papelera' && papelera.length > 0 && ['admin', 'superadmin'].includes(admin?.role) && (
+            <button
+              onClick={vaciarPapeleraPreinscripciones}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-red-200"
+            >
+              <Trash2 className="h-4 w-4" />
+              Vaciar Papelera ({papelera.length})
+            </button>
+          )}
         </div>
 
         <div className="relative w-full">
@@ -415,14 +533,26 @@ export default function AdminPreinscripciones() {
                           <Eye className="h-5 w-5" />
                         </button>
                         {p.isDeleted ? (
-                          <button
-                            onClick={() => restaurarPreinscripcion(p._id, `${p.apellido}, ${p.nombre}`)}
-                            className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-colors cursor-pointer"
-                            title="Restaurar aspirante"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                            Restaurar
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => restaurarPreinscripcion(p._id, `${p.apellido}, ${p.nombre}`)}
+                              className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-colors cursor-pointer"
+                              title="Restaurar aspirante"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              Restaurar
+                            </button>
+                            {['admin', 'superadmin'].includes(admin?.role) && (
+                              <button
+                                onClick={() => eliminarDefinitivoPreinscripcion(p._id, `${p.apellido}, ${p.nombre}`)}
+                                className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-bold transition-colors cursor-pointer"
+                                title="Eliminar definitivamente de la base de datos"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <>
                             {p.estado === 'Pendiente' ? (

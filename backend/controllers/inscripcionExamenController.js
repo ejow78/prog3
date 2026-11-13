@@ -195,3 +195,28 @@ export const restoreInscripcion = async (req, res) => {
     res.status(500).json({ message: 'Error al restaurar la inscripción', error: error.message });
   }
 };
+
+// Eliminación definitiva (Hard Delete) de una inscripción a examen
+export const forceDeleteInscripcion = async (req, res) => {
+  try {
+    const inscripcion = await InscripcionExamen.findByIdAndDelete(req.params.id);
+    if (!inscripcion) {
+      return res.status(404).json({ message: 'Inscripción no encontrada' });
+    }
+    await logAudit(req, 'ELIMINAR_EXAMEN_DEFINITIVO', 'Exámenes', `Se eliminó definitivamente la inscripción a examen de ${inscripcion.nombre} ${inscripcion.apellido} (${inscripcion.carrera})`);
+    res.json({ message: 'Inscripción eliminada de forma permanente' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar definitivamente la inscripción', error: error.message });
+  }
+};
+
+// Vaciar papelera de inscripciones a exámenes
+export const emptyTrashInscripciones = async (req, res) => {
+  try {
+    const result = await InscripcionExamen.deleteMany({ isDeleted: true });
+    await logAudit(req, 'VACIAR_PAPELERA_EXAMENES', 'Exámenes', `Se vació la papelera de inscripciones a examen (${result.deletedCount} registros eliminados)`);
+    res.json({ message: `Se eliminaron ${result.deletedCount} registros de la papelera permanentemente` });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al vaciar la papelera', error: error.message });
+  }
+};

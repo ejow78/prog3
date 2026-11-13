@@ -5,7 +5,9 @@ import {
   updateMateria, 
   bulkSaveMaterias, 
   deleteMateria, 
-  restoreMateria 
+  restoreMateria,
+  forceDeleteMateria,
+  emptyTrashMaterias
 } from '../controllers/materiaController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
@@ -16,6 +18,10 @@ router.route('/')
   .post(protect, authorizeRoles('superadmin', 'admin', 'preceptor'), createMateria);
 
 router.post('/bulk', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), bulkSaveMaterias);
+
+// Papelera y Hard Delete (Admin y Superadmin)
+router.delete('/trash/empty', protect, authorizeRoles('superadmin', 'admin'), emptyTrashMaterias);
+router.delete('/:id/force', protect, authorizeRoles('superadmin', 'admin'), forceDeleteMateria);
 
 router.route('/:id')
   .put(protect, authorizeRoles('superadmin', 'admin', 'preceptor'), updateMateria)

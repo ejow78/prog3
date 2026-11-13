@@ -131,3 +131,31 @@ export const restoreCarrera = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Eliminar definitivamente una carrera
+// @route   DELETE /api/carreras/:id/force
+export const forceDeleteCarrera = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const carrera = await Carrera.findOneAndDelete({ id });
+    if (!carrera) {
+      return res.status(404).json({ message: 'Carrera no encontrada' });
+    }
+    await logAudit(req, 'ELIMINAR_CARRERA_DEFINITIVA', 'Carreras', `Se eliminó definitivamente la carrera: ${carrera.nombre} (ID: ${carrera.id})`);
+    res.json({ message: 'Carrera eliminada de forma permanente' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Vaciar papelera de carreras
+// @route   DELETE /api/carreras/trash/empty
+export const emptyTrashCarreras = async (req, res) => {
+  try {
+    const result = await Carrera.deleteMany({ isDeleted: true });
+    await logAudit(req, 'VACIAR_PAPELERA_CARRERAS', 'Carreras', `Se vació la papelera de carreras (${result.deletedCount} eliminadas)`);
+    res.json({ message: `Se eliminaron ${result.deletedCount} carreras de la papelera permanentemente` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

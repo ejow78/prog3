@@ -9,7 +9,7 @@ export default function AdminMensajes() {
   const [loading, setLoading] = useState(true);
   const [mensajeUI, setMensajeUI] = useState({ texto: '', tipo: '' });
   const [activeTab, setActiveTab] = useState('activos'); // 'activos' | 'papelera'
-  const { token } = useContext(AuthContext);
+  const { token, admin } = useContext(AuthContext);
 
   const fetchMensajes = async () => {
     try {
@@ -87,6 +87,45 @@ export default function AdminMensajes() {
     setTimeout(() => setMensajeUI({ texto: '', tipo: '' }), 3000);
   };
 
+  const eliminarDefinitivoMensaje = async (id) => {
+    if (!window.confirm('¿ELIMINAR DEFINITIVAMENTE este mensaje de consulta?\n\nEsta acción no se puede deshacer.')) return;
+
+    try {
+      const response = await fetch(`/api/mensajes/${id}/force`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al eliminar definitivamente');
+
+      setMensajeUI({ texto: 'Mensaje eliminado permanentemente.', tipo: 'exito' });
+      fetchMensajes();
+    } catch (error) {
+      console.error(error);
+      setMensajeUI({ texto: 'Error al eliminar definitivamente.', tipo: 'error' });
+    }
+    setTimeout(() => setMensajeUI({ texto: '', tipo: '' }), 3000);
+  };
+
+  const vaciarPapeleraMensajes = async () => {
+    if (!window.confirm('¿VACIAR PAPELERA DE MENSAJES?\n\nSe eliminarán de forma irreversible todos los mensajes en la papelera.')) return;
+
+    try {
+      const response = await fetch('/api/mensajes/trash/empty', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al vaciar papelera');
+
+      const data = await response.json();
+      setMensajeUI({ texto: data.message || 'Papelera vaciada correctamente.', tipo: 'exito' });
+      fetchMensajes();
+    } catch (error) {
+      console.error(error);
+      setMensajeUI({ texto: 'Error al vaciar la papelera.', tipo: 'error' });
+    }
+    setTimeout(() => setMensajeUI({ texto: '', tipo: '' }), 3000);
+  };
+
   const activas = mensajes.filter(m => !m.isDeleted);
   const papelera = mensajes.filter(m => m.isDeleted);
   const listaBase = activeTab === 'activos' ? activas : papelera;
@@ -107,12 +146,24 @@ export default function AdminMensajes() {
           <p className="text-slate-500 text-sm mt-1">Lee y gestiona las consultas recibidas desde la página de contacto.</p>
         </div>
 
-        <SoftDeleteFilter
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          totalActivos={activas.length}
-          totalPapelera={papelera.length}
-        />
+        <div className="flex items-center gap-3">
+          <SoftDeleteFilter
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            totalActivos={activas.length}
+            totalPapelera={papelera.length}
+          />
+
+          {activeTab === 'papelera' && papelera.length > 0 && ['admin', 'superadmin'].includes(admin?.role) && (
+            <button
+              onClick={vaciarPapeleraMensajes}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-red-200"
+            >
+              <Trash2 className="h-4 w-4" />
+              Vaciar Papelera ({papelera.length})
+            </button>
+          )}
+        </div>
       </div>
 
       {mensajeUI.texto && (
@@ -160,12 +211,23 @@ export default function AdminMensajes() {
                   
                   <div className="flex items-center gap-2 md:flex-col justify-end shrink-0 border-t md:border-t-0 border-slate-100 pt-4 md:pt-0 mt-4 md:mt-0">
                     {msg.isDeleted ? (
-                      <button
-                        onClick={() => restaurarMensaje(msg._id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium transition-colors w-full md:w-auto justify-center cursor-pointer"
-                      >
-                        <RotateCcw className="h-4 w-4" /> Restaurar
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => restaurarMensaje(msg._id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium transition-colors cursor-pointer"
+                        >
+                          <RotateCcw className="h-4 w-4" /> Restaurar
+                        </button>
+                        {['admin', 'superadmin'].includes(admin?.role) && (
+                          <button
+                            onClick={() => eliminarDefinitivoMensaje(msg._id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors cursor-pointer"
+                            title="Eliminar permanentemente de la base de datos"
+                          >
+                            <Trash2 className="h-4 w-4" /> Eliminar
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       <>
                         <button

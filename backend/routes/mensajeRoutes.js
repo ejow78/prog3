@@ -4,7 +4,9 @@ import {
   getMensajes, 
   toggleLeido, 
   deleteMensaje,
-  restoreMensaje
+  restoreMensaje,
+  forceDeleteMensaje,
+  emptyTrashMensajes
 } from '../controllers/mensajeController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
@@ -18,5 +20,9 @@ router.get('/', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), get
 router.put('/:id/leido', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), toggleLeido);
 router.delete('/:id', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), deleteMensaje);
 router.put('/:id/restore', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), restoreMensaje);
+
+// Papelera y Hard Delete (Admin y Superadmin)
+router.delete('/trash/empty', protect, authorizeRoles('superadmin', 'admin'), emptyTrashMensajes);
+router.delete('/:id/force', protect, authorizeRoles('superadmin', 'admin'), forceDeleteMensaje);
 
 export default router;

@@ -7,7 +7,7 @@ import {
   Settings, Menu, X, BookOpen, Clock, ArrowRight, CheckCircle2, AlertCircle, 
   ShieldCheck, Database, Server, Sparkles, Plus, Trash2, Edit3, Search, 
   Terminal, Activity, ChevronLeft, ChevronRight, Check, Square, CalendarDays,
-  GraduationCap, UserCheck, ChevronDown
+  GraduationCap, UserCheck, ChevronDown, Sliders
 } from 'lucide-react';
 
 // Lazy loading para pantallas
@@ -40,6 +40,42 @@ const Resumen = () => {
   });
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingText, setEditingText] = useState('');
+  const [settings, setSettings] = useState({
+    activeYear: 2026,
+    preinscripcionesAbiertas: true,
+    examenesAbiertos: true
+  });
+  const [toggleLoading, setToggleLoading] = useState(false);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+      }
+    } catch (err) {
+      console.error('Error fetching settings in Dashboard:', err);
+    }
+  };
+
+  const handleTogglePeriod = async (field) => {
+    try {
+      setToggleLoading(true);
+      const res = await fetch(`/api/settings/toggle/${field}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data.settings);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setToggleLoading(false);
+    }
+  };
 
   const fetchStatsAndData = async () => {
     try {
@@ -59,6 +95,7 @@ const Resumen = () => {
 
   useEffect(() => {
     fetchStatsAndData();
+    fetchSettings();
   }, [token]);
 
   useEffect(() => {
@@ -128,6 +165,100 @@ const Resumen = () => {
             <CalendarIcon className="w-4 h-4" />
             Exámenes
           </button>
+        </div>
+      </div>
+
+      {/* Control Rápido de Apertura/Cierre de Inscripciones (Preceptor, Admin, Superadmin) */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-slate-100 gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+              <Sliders className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Estado de Periodos e Inscripciones</h3>
+              <p className="text-xs text-slate-400">Apertura y cierre inmediato para Preceptoría y Administración</p>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold px-3 py-1 bg-slate-100 text-slate-600 rounded-full w-fit">
+            Ciclo Lectivo {settings.activeYear || 2026}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Preinscripciones Toggle Card */}
+          <div className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+            settings.preinscripcionesAbiertas
+              ? 'bg-emerald-50/50 border-emerald-200'
+              : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800">Preinscripciones a Carreras</span>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  settings.preinscripcionesAbiertas
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-300 text-slate-700'
+                }`}>
+                  {settings.preinscripcionesAbiertas ? 'Abiertas' : 'Cerradas'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                {settings.preinscripcionesAbiertas
+                  ? 'Aspirantes pueden completar el formulario de ingreso.'
+                  : 'Formulario web público cerrado para nuevos ingresos.'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => handleTogglePeriod('preinscripcionesAbiertas')}
+              disabled={toggleLoading}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+                settings.preinscripcionesAbiertas
+                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-800'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+            >
+              {settings.preinscripcionesAbiertas ? 'Cerrar Periodo' : 'Habilitar Periodo'}
+            </button>
+          </div>
+
+          {/* Exámenes Toggle Card */}
+          <div className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+            settings.examenesAbiertos
+              ? 'bg-indigo-50/50 border-indigo-200'
+              : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800">Inscripción a Mesas de Exámenes</span>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  settings.examenesAbiertos
+                    ? 'bg-primary text-white'
+                    : 'bg-slate-300 text-slate-700'
+                }`}>
+                  {settings.examenesAbiertos ? 'Habilitadas' : 'Cerradas'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                {settings.examenesAbiertos
+                  ? 'Alumnos regulares y libres pueden anotarse a llamados.'
+                  : 'Inscripción a mesas finalizada o en receso.'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => handleTogglePeriod('examenesAbiertos')}
+              disabled={toggleLoading}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+                settings.examenesAbiertos
+                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-800'
+                  : 'bg-primary hover:bg-primary-dark text-white'
+              }`}
+            >
+              {settings.examenesAbiertos ? 'Cerrar Mesas' : 'Habilitar Mesas'}
+            </button>
+          </div>
         </div>
       </div>
 

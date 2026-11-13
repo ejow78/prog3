@@ -40,6 +40,18 @@ const fechaExamenSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: String,
+    default: null
+  }
 }, {
   timestamps: true
 });

@@ -98,3 +98,31 @@ export const restoreMensaje = async (req, res) => {
     res.status(500).json({ message: 'Error al restaurar el mensaje', error: error.message });
   }
 };
+
+// @desc    Eliminar definitivamente un mensaje
+// @route   DELETE /api/mensajes/:id/force
+export const forceDeleteMensaje = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mensaje = await Mensaje.findByIdAndDelete(id);
+    if (!mensaje) {
+      return res.status(404).json({ message: 'Mensaje no encontrado' });
+    }
+    await logAudit(req, 'ELIMINAR_MENSAJE_DEFINITIVO', 'Mensajes', `Se eliminó definitivamente el mensaje de ${mensaje.nombre} ${mensaje.apellido || ''} (Email: ${mensaje.email})`);
+    res.json({ message: 'Mensaje eliminado de forma permanente' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar definitivamente el mensaje', error: error.message });
+  }
+};
+
+// @desc    Vaciar papelera de mensajes
+// @route   DELETE /api/mensajes/trash/empty
+export const emptyTrashMensajes = async (req, res) => {
+  try {
+    const result = await Mensaje.deleteMany({ isDeleted: true });
+    await logAudit(req, 'VACIAR_PAPELERA_MENSAJES', 'Mensajes', `Se vació la papelera de mensajes (${result.deletedCount} eliminados)`);
+    res.json({ message: `Se eliminaron ${result.deletedCount} mensajes de la papelera permanentemente` });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al vaciar la papelera', error: error.message });
+  }
+};

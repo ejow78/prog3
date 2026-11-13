@@ -19,7 +19,38 @@ export default function AdminExamenes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [inscripcionSeleccionada, setInscripcionSeleccionada] = useState(null);
   const [activeTab, setActiveTab] = useState('activos'); // 'activos' | 'papelera'
+  const [settings, setSettings] = useState({ examenesAbiertos: true });
   const { token, admin } = useContext(AuthContext);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleToggleExamenes = async () => {
+    try {
+      const res = await fetch('/api/settings/toggle/examenesAbiertos', {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data.settings);
+        setMensaje({ texto: data.message, tipo: 'exito' });
+        setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setMensaje({ texto: 'Error al cambiar periodo', tipo: 'error' });
+    }
+  };
 
   const ITEMS_PER_PAGE = 10;
 
@@ -45,6 +76,7 @@ export default function AdminExamenes() {
 
   useEffect(() => {
     fetchInscripciones();
+    fetchSettings();
   }, []);
 
   const cambiarEstado = async (id, nuevoEstado) => {
@@ -104,6 +136,45 @@ export default function AdminExamenes() {
       setMensaje({ texto: 'Error al restaurar inscripción', tipo: 'error' });
     }
 
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+  };
+
+  const eliminarDefinitivoInscripcion = async (id, nombreAlumno) => {
+    if (!window.confirm(`¿ELIMINAR DEFINITIVAMENTE la inscripción de ${nombreAlumno || 'este alumno'}?\n\nEsta acción NO se puede deshacer y borrará el registro de la base de datos por completo.`)) return;
+
+    try {
+      const response = await fetch(`/api/inscripciones-examenes/${id}/force`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al eliminar definitivamente');
+
+      setMensaje({ texto: 'Inscripción eliminada permanentemente.', tipo: 'exito' });
+      fetchInscripciones();
+    } catch (error) {
+      console.error(error);
+      setMensaje({ texto: 'Error al eliminar definitivamente.', tipo: 'error' });
+    }
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+  };
+
+  const vaciarPapeleraInscripciones = async () => {
+    if (!window.confirm(`¿VACIAR TODA LA PAPELERA DE EXÁMENES?\n\nSe eliminarán de forma irreversible todos los registros en la papelera.`)) return;
+
+    try {
+      const response = await fetch('/api/inscripciones-examenes/trash/empty', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al vaciar la papelera');
+
+      const data = await response.json();
+      setMensaje({ texto: data.message || 'Papelera vaciada correctamente.', tipo: 'exito' });
+      fetchInscripciones();
+    } catch (error) {
+      console.error(error);
+      setMensaje({ texto: 'Error al vaciar la papelera.', tipo: 'error' });
+    }
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
@@ -361,6 +432,43 @@ export default function AdminExamenes() {
         </div>
       </div>
 
+      {/* Banner de Control de Estado de Exámenes */}
+      <div className={`p-4 rounded-2xl mb-6 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+        settings.examenesAbiertos
+          ? 'bg-indigo-50/60 border-indigo-200 text-indigo-950'
+          : 'bg-amber-50/60 border-amber-200 text-amber-900'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-3 h-3 rounded-full ${
+            settings.examenesAbiertos ? 'bg-primary animate-pulse' : 'bg-amber-500'
+          }`} />
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-wider">
+              Mesas de Exámenes Finales:
+              <strong className="ml-1.5 underline">
+                {settings.examenesAbiertos ? 'Inscripciones Habilitadas' : 'Inscripciones Cerradas'}
+              </strong>
+            </p>
+            <p className="text-xs opacity-80 mt-0.5">
+              {settings.examenesAbiertos
+                ? 'Los alumnos pueden inscribirse a las mesas de examen habilitadas.'
+                : 'El periodo de inscripción a exámenes se encuentra cerrado o en receso.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleToggleExamenes}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+            settings.examenesAbiertos
+              ? 'bg-amber-200 hover:bg-amber-300 text-amber-900'
+              : 'bg-primary hover:bg-primary-dark text-white'
+          }`}
+        >
+          {settings.examenesAbiertos ? 'Cerrar Mesas' : 'Habilitar Mesas'}
+        </button>
+      </div>
+
       {mensaje.texto && (
         <div className={`p-4 rounded-lg mb-6 flex items-center gap-2 ${mensaje.tipo === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
           <AlertCircle className="h-5 w-5 animate-pulse text-current" />
@@ -377,6 +485,16 @@ export default function AdminExamenes() {
             totalActivos={activas.length}
             totalPapelera={papelera.length}
           />
+
+          {activeTab === 'papelera' && papelera.length > 0 && ['admin', 'superadmin'].includes(admin?.role) && (
+            <button
+              onClick={vaciarPapeleraInscripciones}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-red-200"
+            >
+              <Trash2 className="h-4 w-4" />
+              Vaciar Papelera ({papelera.length})
+            </button>
+          )}
         </div>
 
         <div className="relative w-full">
@@ -538,14 +656,26 @@ export default function AdminExamenes() {
                           <Eye className="h-4 w-4" />
                         </button>
                         {i.isDeleted ? (
-                          <button
-                            onClick={() => restaurarInscripcion(i._id, `${i.apellido}, ${i.nombre}`)}
-                            className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                            title="Restaurar inscripción"
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            Restaurar
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => restaurarInscripcion(i._id, `${i.apellido}, ${i.nombre}`)}
+                              className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                              title="Restaurar inscripción"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              Restaurar
+                            </button>
+                            {['admin', 'superadmin'].includes(admin?.role) && (
+                              <button
+                                onClick={() => eliminarDefinitivoInscripcion(i._id, `${i.apellido}, ${i.nombre}`)}
+                                className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                                title="Eliminar definitivamente de la base de datos"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <>
                             {i.estado === 'Pendiente' && (

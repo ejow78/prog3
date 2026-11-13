@@ -157,3 +157,29 @@ export const restorePreinscripcion = async (req, res) => {
     res.status(500).json({ message: 'Error al restaurar la preinscripción', error: error.message });
   }
 };
+
+// Eliminación definitiva (Hard Delete) de una preinscripción
+export const forceDeletePreinscripcion = async (req, res) => {
+  try {
+    const preinscripcion = await Preinscripcion.findByIdAndDelete(req.params.id);
+    if (!preinscripcion) {
+      return res.status(404).json({ message: 'Preinscripción no encontrada' });
+    }
+
+    await logAudit(req, 'ELIMINAR_PREINSCRIPCION_DEFINITIVA', 'Preinscripciones', `Se eliminó definitivamente la preinscripción de ${preinscripcion.nombre} ${preinscripcion.apellido} (${preinscripcion.carrera})`);
+    res.json({ message: 'Preinscripción eliminada de forma permanente' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar definitivamente la preinscripción', error: error.message });
+  }
+};
+
+// Vaciar papelera de preinscripciones
+export const emptyTrashPreinscripciones = async (req, res) => {
+  try {
+    const result = await Preinscripcion.deleteMany({ isDeleted: true });
+    await logAudit(req, 'VACIAR_PAPELERA_PREINSCRIPCIONES', 'Preinscripciones', `Se vació la papelera de preinscripciones (${result.deletedCount} registros eliminados)`);
+    res.json({ message: `Se eliminaron ${result.deletedCount} registros de la papelera permanentemente` });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al vaciar la papelera', error: error.message });
+  }
+};

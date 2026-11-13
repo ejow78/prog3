@@ -99,6 +99,43 @@ export default function AdminCarreras() {
     }
   };
 
+  // Eliminación definitiva (Hard delete)
+  const handleForceDeleteCarrera = async (id, nombre) => {
+    if (!window.confirm(`¿ELIMINAR DEFINITIVAMENTE la carrera "${nombre}"?\n\nEsta acción NO se puede deshacer y borrará la carrera de la base de datos permanentemente.`)) return;
+
+    try {
+      const response = await fetch(`/api/carreras/${id}/force`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al eliminar definitivamente');
+
+      setMensaje({ tipo: 'success', texto: `Carrera "${nombre}" eliminada de forma permanente.` });
+      fetchCarreras();
+    } catch (error) {
+      setMensaje({ tipo: 'error', texto: 'Error al eliminar definitivamente la carrera.' });
+    }
+  };
+
+  // Vaciar papelera de carreras
+  const handleEmptyTrashCarreras = async () => {
+    if (!window.confirm('¿VACIAR PAPELERA DE CARRERAS?\n\nSe eliminarán de forma irreversible todas las carreras en la papelera.')) return;
+
+    try {
+      const response = await fetch('/api/carreras/trash/empty', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error al vaciar papelera');
+
+      const data = await response.json();
+      setMensaje({ tipo: 'success', texto: data.message || 'Papelera vaciada correctamente.' });
+      fetchCarreras();
+    } catch (error) {
+      setMensaje({ tipo: 'error', texto: 'Error al vaciar la papelera de carreras.' });
+    }
+  };
+
   // Separar activas vs papelera
   const activas = carreras.filter(c => !c.isDeleted);
   const papelera = carreras.filter(c => c.isDeleted);
@@ -212,12 +249,24 @@ export default function AdminCarreras() {
 
           {/* Barra de Filtros y Selector de Papelera */}
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
-            <SoftDeleteFilter 
-              activeTab={activeTab} 
-              onTabChange={setActiveTab}
-              totalActivos={activas.length}
-              totalPapelera={papelera.length}
-            />
+            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+              <SoftDeleteFilter 
+                activeTab={activeTab} 
+                onTabChange={setActiveTab}
+                totalActivos={activas.length}
+                totalPapelera={papelera.length}
+              />
+
+              {activeTab === 'papelera' && papelera.length > 0 && ['admin', 'superadmin'].includes(admin?.role) && (
+                <button
+                  onClick={handleEmptyTrashCarreras}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-red-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Vaciar Papelera ({papelera.length})
+                </button>
+              )}
+            </div>
 
             <div className="flex items-center gap-2.5 w-full md:w-auto">
               <div className="relative flex-1 md:w-64">
@@ -297,13 +346,25 @@ export default function AdminCarreras() {
 
                   <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
                     {carrera.isDeleted ? (
-                      <button
-                        onClick={() => handleRestoreCarrera(carrera.id, carrera.nombre)}
-                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        Restaurar Carrera
-                      </button>
+                      <div className="flex items-center gap-2 w-full">
+                        <button
+                          onClick={() => handleRestoreCarrera(carrera.id, carrera.nombre)}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Restaurar
+                        </button>
+                        {['admin', 'superadmin'].includes(admin?.role) && (
+                          <button
+                            onClick={() => handleForceDeleteCarrera(carrera.id, carrera.nombre)}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                            title="Eliminar de forma permanente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       <>
                         <button

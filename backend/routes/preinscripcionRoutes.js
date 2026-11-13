@@ -4,7 +4,9 @@ import {
   getPreinscripciones, 
   updateEstadoPreinscripcion, 
   deletePreinscripcion,
-  restorePreinscripcion
+  restorePreinscripcion,
+  forceDeletePreinscripcion,
+  emptyTrashPreinscripciones
 } from '../controllers/preinscripcionController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
@@ -18,5 +20,9 @@ router.get('/', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), get
 router.put('/:id/estado', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), updateEstadoPreinscripcion);
 router.delete('/:id', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), deletePreinscripcion);
 router.put('/:id/restore', protect, authorizeRoles('superadmin', 'admin', 'preceptor'), restorePreinscripcion);
+
+// Eliminación definitiva (Admin y Superadmin)
+router.delete('/trash/empty', protect, authorizeRoles('superadmin', 'admin'), emptyTrashPreinscripciones);
+router.delete('/:id/force', protect, authorizeRoles('superadmin', 'admin'), forceDeletePreinscripcion);
 
 export default router;

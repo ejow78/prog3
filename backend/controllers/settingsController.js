@@ -63,14 +63,10 @@ export const getSettings = async (req, res) => {
   }
 };
 
-// @desc    Actualizar configuración del sistema (Superadmin)
+// @desc    Actualizar configuración del sistema (Superadmin, Admin, Preceptor)
 // @route   PUT /api/settings
 export const updateSettings = async (req, res) => {
   try {
-    if (req.admin.role !== 'superadmin') {
-      return res.status(403).json({ message: 'Acceso denegado. Permisos insuficientes.' });
-    }
-
     let settings = await SystemSettings.findOne({});
     if (!settings) {
       settings = new SystemSettings({});
@@ -95,14 +91,14 @@ export const updateSettings = async (req, res) => {
     if (examenesAbiertos !== undefined) settings.examenesAbiertos = examenesAbiertos;
     
     // Manage optional dates
-    settings.preinscripcionesInicio = preinscripcionesInicio || null;
-    settings.preinscripcionesFin = preinscripcionesFin || null;
-    settings.examenes1LlamadoInicio = examenes1LlamadoInicio || null;
-    settings.examenes1LlamadoFin = examenes1LlamadoFin || null;
-    settings.examenes2LlamadoInicio = examenes2LlamadoInicio || null;
-    settings.examenes2LlamadoFin = examenes2LlamadoFin || null;
-    settings.examenesEspLlamadoInicio = examenesEspLlamadoInicio || null;
-    settings.examenesEspLlamadoFin = examenesEspLlamadoFin || null;
+    if (preinscripcionesInicio !== undefined) settings.preinscripcionesInicio = preinscripcionesInicio || null;
+    if (preinscripcionesFin !== undefined) settings.preinscripcionesFin = preinscripcionesFin || null;
+    if (examenes1LlamadoInicio !== undefined) settings.examenes1LlamadoInicio = examenes1LlamadoInicio || null;
+    if (examenes1LlamadoFin !== undefined) settings.examenes1LlamadoFin = examenes1LlamadoFin || null;
+    if (examenes2LlamadoInicio !== undefined) settings.examenes2LlamadoInicio = examenes2LlamadoInicio || null;
+    if (examenes2LlamadoFin !== undefined) settings.examenes2LlamadoFin = examenes2LlamadoFin || null;
+    if (examenesEspLlamadoInicio !== undefined) settings.examenesEspLlamadoInicio = examenesEspLlamadoInicio || null;
+    if (examenesEspLlamadoFin !== undefined) settings.examenesEspLlamadoFin = examenesEspLlamadoFin || null;
 
     const savedSettings = await settings.save();
 
@@ -111,23 +107,42 @@ export const updateSettings = async (req, res) => {
     if (activeYear !== undefined) details.push(`año lectivo: ${activeYear}`);
     if (preinscripcionesAbiertas !== undefined) details.push(`preinscripciones: ${preinscripcionesAbiertas ? 'Abiertas' : 'Cerradas'}`);
     if (examenesAbiertos !== undefined) details.push(`exámenes: ${examenesAbiertos ? 'Abiertas' : 'Cerradas'}`);
-    if (preinscripcionesInicio !== undefined || preinscripcionesFin !== undefined) {
-      details.push(`fechas preinscripción: ${preinscripcionesInicio ? formatDateStr(preinscripcionesInicio) : 'sin fecha'} a ${preinscripcionesFin ? formatDateStr(preinscripcionesFin) : 'sin fecha'}`);
-    }
-    if (examenes1LlamadoInicio !== undefined || examenes1LlamadoFin !== undefined) {
-      details.push(`inscripciones 1° llamado: ${examenes1LlamadoInicio ? formatDateStr(examenes1LlamadoInicio) : 'sin fecha'} a ${examenes1LlamadoFin ? formatDateStr(examenes1LlamadoFin) : 'sin fecha'}`);
-    }
-    if (examenes2LlamadoInicio !== undefined || examenes2LlamadoFin !== undefined) {
-      details.push(`inscripciones 2° llamado: ${examenes2LlamadoInicio ? formatDateStr(examenes2LlamadoInicio) : 'sin fecha'} a ${examenes2LlamadoFin ? formatDateStr(examenes2LlamadoFin) : 'sin fecha'}`);
-    }
-    if (examenesEspLlamadoInicio !== undefined || examenesEspLlamadoFin !== undefined) {
-      details.push(`inscripciones esp. llamado: ${examenesEspLlamadoInicio ? formatDateStr(examenesEspLlamadoInicio) : 'sin fecha'} a ${examenesEspLlamadoFin ? formatDateStr(examenesEspLlamadoFin) : 'sin fecha'}`);
-    }
 
-    await logAudit(req, 'MODIFICAR_CONFIGURACION', 'Seguridad', `Se actualizó la configuración del sistema: ${details.join(', ')}`);
+    await logAudit(req, 'MODIFICAR_CONFIGURACION', 'Configuraciones', `Se actualizó la configuración del sistema (${req.admin.role}): ${details.join(', ')}`);
 
     res.json(savedSettings);
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar la configuración', error: error.message });
+  }
+};
+
+// @desc    Conmutar apertura de inscripciones de forma directa (Preceptor, Admin, Superadmin)
+// @route   PATCH /api/settings/toggle/:field
+export const togglePeriodo = async (req, res) => {
+  try {
+    const { field } = req.params;
+    if (!['preinscripcionesAbiertas', 'examenesAbiertos'].includes(field)) {
+      return res.status(400).json({ message: 'Campo de configuración no válido' });
+    }
+
+    let settings = await SystemSettings.findOne({});
+    if (!settings) {
+      settings = new SystemSettings({});
+    }
+
+    settings[field] = !settings[field];
+    const saved = await settings.save();
+
+    const label = field === 'preinscripcionesAbiertas' ? 'Preinscripciones' : 'Exámenes Finales';
+    const statusText = saved[field] ? 'ABIERTO' : 'CERRADO';
+
+    await logAudit(req, 'MODIFICAR_CONFIGURACION', 'Configuraciones', `${req.admin.username} (${req.admin.role}) cambió el estado de ${label} a ${statusText}`);
+
+    res.json({
+      message: `${label} ahora se encuentra ${statusText.toLowerCase()}`,
+      settings: saved
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al cambiar estado del periodo', error: error.message });
   }
 };
