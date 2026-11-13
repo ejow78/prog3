@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Calendar, Eye, BookOpen, GraduationCap, User, FileText, CheckCircle2, ChevronRight, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Calendar, Eye, BookOpen, GraduationCap, User, FileText, CheckCircle2, ChevronRight, RotateCcw, CalendarDays } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
-import { useContext } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import SoftDeleteFilter from '../../components/admin/SoftDeleteFilter';
 
 export default function AdminExamenes() {
+  const navigate = useNavigate();
   const [inscripciones, setInscripciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState('Todas');
@@ -457,16 +458,26 @@ export default function AdminExamenes() {
           </div>
         </div>
 
-        <button
-          onClick={handleToggleExamenes}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
-            settings.examenesAbiertos
-              ? 'bg-amber-200 hover:bg-amber-300 text-amber-900'
-              : 'bg-primary hover:bg-primary-dark text-white'
-          }`}
-        >
-          {settings.examenesAbiertos ? 'Cerrar Mesas' : 'Habilitar Mesas'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/admin/periodos')}
+            className="px-3 py-1.5 bg-white/80 hover:bg-white text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer border border-slate-200"
+            title="Configurar fechas de llamados y calendario"
+          >
+            <CalendarDays className="w-3.5 h-3.5 text-primary" />
+            Configurar Fechas
+          </button>
+          <button
+            onClick={handleToggleExamenes}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+              settings.examenesAbiertos
+                ? 'bg-amber-200 hover:bg-amber-300 text-amber-900'
+                : 'bg-primary hover:bg-primary-dark text-white'
+            }`}
+          >
+            {settings.examenesAbiertos ? 'Cerrar Mesas' : 'Habilitar Mesas'}
+          </button>
+        </div>
       </div>
 
       {mensaje.texto && (

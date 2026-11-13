@@ -414,7 +414,7 @@ async function seedData() {
         materia: ['BASE DE DATOS I', 'ANÁLISIS Y DISEÑO DE SISTEMAS'],
         fecha: '2026-11-27',
         hora: '19:00',
-        tribunal: 'Ing. Silvia Rossi, Ing. Carlos Robles, Trad. Marcos Medina'
+        tribunal: 'Ing. Silvia Rossi, Ing. Carlos Robles, Prof. Marcos Medina'
       },
       {
         turno: 'Noviembre-Diciembre 2026',
@@ -444,7 +444,7 @@ async function seedData() {
         materia: ['MATEMÁTICA APLICADA', 'INGLÉS TÉCNICO I'],
         fecha: '2026-12-15',
         hora: '19:15',
-        tribunal: 'Prof. Mario Albornoz, Trad. Marcos Medina, Ing. Silvia Rossi'
+        tribunal: 'Prof. Mario Albornoz, Prof. Marcos Medina, Ing. Silvia Rossi'
       },
       {
         turno: 'Noviembre-Diciembre 2026',
@@ -528,7 +528,7 @@ async function seedData() {
         materia: ['COMUNICACIÓN Y COMPRENSIÓN DE TEXTOS'],
         fecha: '2026-12-18',
         hora: '19:00',
-        tribunal: 'Trad. Marcos Medina, Lic. Laura Juárez',
+        tribunal: 'Prof. Marcos Medina, Lic. Laura Juárez',
         isDeleted: true,
         deletedAt: new Date(Date.now() - 86400000 * 2),
         deletedBy: 'admin (admin)'
@@ -657,7 +657,7 @@ async function seedData() {
           martes: { materia: 'SISTEMAS OPERATIVOS', profesor: 'Lic. Laura Juárez' },
           miercoles: { materia: 'MATEMÁTICA APLICADA', profesor: 'Prof. Mario Albornoz' },
           jueves: { materia: 'ARQUITECTURA DE COMPUTADORAS', profesor: 'Ing. Silvia Rossi' },
-          viernes: { materia: 'INGLÉS TÉCNICO I', profesor: 'Trad. Marcos Medina' }
+          viernes: { materia: 'INGLÉS TÉCNICO I', profesor: 'Prof. Marcos Medina' }
         },
         {
           hora: '19:10 - 19:50',
@@ -666,7 +666,7 @@ async function seedData() {
           martes: { materia: 'SISTEMAS OPERATIVOS', profesor: 'Lic. Laura Juárez' },
           miercoles: { materia: 'MATEMÁTICA APLICADA', profesor: 'Prof. Mario Albornoz' },
           jueves: { materia: 'ARQUITECTURA DE COMPUTADORAS', profesor: 'Ing. Silvia Rossi' },
-          viernes: { materia: 'INGLÉS TÉCNICO I', profesor: 'Trad. Marcos Medina' }
+          viernes: { materia: 'INGLÉS TÉCNICO I', profesor: 'Prof. Marcos Medina' }
         },
         {
           hora: '19:50 - 20:30',

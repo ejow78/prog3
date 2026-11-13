@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Eye, Phone, Mail, FileText, Printer, MessageCircle, ExternalLink, Calendar, MapPin, User, GraduationCap, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Check, X, Clock, AlertCircle, Download, FileSpreadsheet, Trash2, Search, Eye, Phone, Mail, FileText, Printer, MessageCircle, ExternalLink, Calendar, MapPin, User, GraduationCap, RotateCcw, CalendarDays } from 'lucide-react';
 import { AuthContext } from '../../contexts/AuthContext';
-import { useContext } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import SoftDeleteFilter from '../../components/admin/SoftDeleteFilter';
 
 export default function AdminPreinscripciones() {
+  const navigate = useNavigate();
   const [preinscripciones, setPreinscripciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState('Todas');
@@ -385,16 +386,26 @@ export default function AdminPreinscripciones() {
           </div>
         </div>
 
-        <button
-          onClick={handleTogglePeriodo}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
-            settings.preinscripcionesAbiertas
-              ? 'bg-amber-200 hover:bg-amber-300 text-amber-900'
-              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-          }`}
-        >
-          {settings.preinscripcionesAbiertas ? 'Cerrar Periodo' : 'Abrir Periodo'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/admin/periodos')}
+            className="px-3 py-1.5 bg-white/80 hover:bg-white text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer border border-slate-200"
+            title="Configurar calendario escolar y fechas límites"
+          >
+            <CalendarDays className="w-3.5 h-3.5 text-primary" />
+            Configurar Fechas
+          </button>
+          <button
+            onClick={handleTogglePeriodo}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 ${
+              settings.preinscripcionesAbiertas
+                ? 'bg-amber-200 hover:bg-amber-300 text-amber-900'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+            }`}
+          >
+            {settings.preinscripcionesAbiertas ? 'Cerrar Periodo' : 'Abrir Periodo'}
+          </button>
+        </div>
       </div>
 
       {mensaje.texto && (

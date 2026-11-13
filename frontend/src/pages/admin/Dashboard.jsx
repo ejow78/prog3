@@ -18,6 +18,7 @@ const AdminExamenes = lazy(() => import('./AdminExamenes'));
 const AdminFechasExamenes = lazy(() => import('./AdminFechasExamenes'));
 const AdminMaterias = lazy(() => import('./AdminMaterias'));
 const AdminHorarios = lazy(() => import('./AdminHorarios'));
+const AdminPeriodosConfig = lazy(() => import('./AdminPeriodosConfig'));
 const AdminGestionCentral = lazy(() => import('./AdminGestionCentral'));
 
 const Resumen = () => {
@@ -180,9 +181,19 @@ const Resumen = () => {
               <p className="text-xs text-slate-400">Apertura y cierre inmediato para Preceptoría y Administración</p>
             </div>
           </div>
-          <span className="text-[11px] font-bold px-3 py-1 bg-slate-100 text-slate-600 rounded-full w-fit">
-            Ciclo Lectivo {settings.activeYear || 2026}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold px-3 py-1 bg-slate-100 text-slate-600 rounded-full w-fit">
+              Ciclo Lectivo {settings.activeYear || 2026}
+            </span>
+            <button
+              onClick={() => navigate('/admin/periodos')}
+              className="px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+              title="Configurar fechas de llamados y preinscripciones"
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              Configurar Fechas y Ciclo
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -538,7 +549,8 @@ export default function Dashboard() {
       title: 'Admisiones e Ingreso',
       items: [
         { name: 'Preinscripciones', path: '/admin/preinscripciones', icon: <Users className="h-4 w-4" /> },
-        { name: 'Inscr. Exámenes', path: '/admin/examenes', icon: <CalendarIcon className="h-4 w-4" /> }
+        { name: 'Inscr. Exámenes', path: '/admin/examenes', icon: <CalendarIcon className="h-4 w-4" /> },
+        { name: 'Ciclo y Calendario', path: '/admin/periodos', icon: <CalendarDays className="h-4 w-4" /> }
       ]
     },
     {
@@ -691,6 +703,7 @@ export default function Dashboard() {
               <Route path="mensajes" element={<AdminMensajes />} />
               <Route path="examenes" element={<AdminExamenes />} />
               <Route path="fechas-examenes" element={<AdminFechasExamenes />} />
+              <Route path="periodos" element={<AdminPeriodosConfig />} />
               {admin?.role === 'superadmin' && (
                 <Route path="gestion-central" element={<AdminGestionCentral />} />
               )}
