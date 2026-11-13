@@ -11,6 +11,8 @@ import inscripcionExamenRoutes from './routes/inscripcionExamenRoutes.js';
 import fechaExamenRoutes from './routes/fechaExamenRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import materiaRoutes from './routes/materiaRoutes.js';
+import horarioRoutes from './routes/horarioRoutes.js';
 
 dotenv.config();
 
@@ -30,6 +32,8 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/inscripciones-examenes', inscripcionExamenRoutes);
 app.use('/api/fechas-examenes', fechaExamenRoutes);
+app.use('/api/materias', materiaRoutes);
+app.use('/api/horarios', horarioRoutes);
 app.use('/api/auditorias', auditRoutes);
 app.use('/api/settings', settingsRoutes);
 
